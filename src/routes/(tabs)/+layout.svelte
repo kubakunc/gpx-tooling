@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   let { children } = $props();
   const tabs = [
     { href: '/merge', label: 'Merge' },
@@ -16,7 +16,7 @@
     {#each tabs as tab}
       <a
         href={tab.href}
-        class="flex-1 py-3 text-center text-sm font-medium {$page.url.pathname === tab.href
+        class="flex-1 py-3 text-center text-sm font-medium {page.url.pathname === tab.href
           ? 'text-accent'
           : 'text-ink-muted'}"
       >
