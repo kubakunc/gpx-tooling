@@ -5,6 +5,7 @@ import {
   buildFitFixture14,
   buildFitFixtureWithDevData,
   buildFitFixtureWithExtras,
+  buildFitFixtureCompressedTimestamp,
   type FitFixtureRecord,
 } from './buildFitFixture';
 import { ParseError } from '../../../domain/errors';
@@ -109,6 +110,130 @@ describe('parseFit', () => {
     bytes[dataHeaderPos] = 0x80; // compressed-timestamp, localType 0, offset 0
     const p = parseFit(bytes, 'r.fit').points[0];
     expect(p.latitude).toBeCloseTo(45, 4);
+  });
+
+  it('applies a compressed-timestamp offset relative to the last full timestamp', () => {
+    // First record carries a full timestamp (field 253). The second record is
+    // a compressed-timestamp record (no 253 field) whose 5-bit offset should
+    // resolve against the first record's timestamp.
+    const base = 0x100; // low 5 bits = 0
+    const offset = 5;
+    const bytes = buildFitFixtureCompressedTimestamp(
+      { ...REC, timestamp: base, latSemicircles: LAT_45, lonSemicircles: LON_15 },
+      offset
+    );
+    const file = parseFit(bytes, 'ct.fit');
+    expect(file.points).toHaveLength(2);
+    // First point: full timestamp.
+    expect(file.points[0].time?.getTime()).toBe((base + 631065600) * 1000);
+    // Second point: base low-5 replaced by offset → base + 5.
+    expect(file.points[1].time?.getTime()).toBe((base + offset + 631065600) * 1000);
+  });
+
+  it('rolls a compressed-timestamp offset over 32 s when it wraps', () => {
+    // previous low-5 = 10, offset = 3 (< 10) → +0x20 rollover.
+    const base = 10; // low 5 bits = 10
+    const offset = 3;
+    const bytes = buildFitFixtureCompressedTimestamp({ ...REC, timestamp: base }, offset);
+    const file = parseFit(bytes, 'ct.fit');
+    // base(10) high bits 0 → next = 0 + 3 + 0x20 = 0x23 = 35
+    expect(file.points[1].time?.getTime()).toBe((0x20 + offset + 631065600) * 1000);
+  });
+
+  it('skips a compressed-timestamp record referencing an undefined local type', () => {
+    // Two normal records, then flip the SECOND data header into a
+    // compressed-timestamp header for localType 1 (only localType 0 defined).
+    // The decoder must skip it gracefully (no hard ParseError for "before
+    // definition") — the first real record still decodes.
+    const defLen = 1 + 1 + 1 + 2 + 1 + 6 * 3;
+    const dataLen = 1 + 4 + 4 + 4 + 2 + 1 + 2; // localType data record length
+    const secondDataPos = 12 + defLen + dataLen;
+    const two = buildFitFixture([REC, REC]);
+    two[secondDataPos] = 0x80 | (1 << 5); // compressed-ts header, localType 1
+    const file = parseFit(two, 'ct.fit');
+    expect(file.points.length).toBeGreaterThanOrEqual(1);
+    expect(file.points[0].latitude).toBeCloseTo(45, 4);
+  });
+
+  describe('robustness on malformed/truncated input (throws ParseError, never RangeError)', () => {
+    it('throws ParseError on a truncated buffer (valid fixture sliced short)', () => {
+      const full = buildFitFixture([REC, { ...REC, timestamp: TS + 1 }]);
+      // Cut into the middle of the data records so a field read runs past end.
+      const truncated = full.slice(0, full.length - 6);
+      let thrown: unknown;
+      try {
+        parseFit(truncated, 'trunc.fit');
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBeInstanceOf(ParseError);
+      expect(() => parseFit(truncated, 'trunc.fit')).toThrow(ParseError);
+    });
+
+    it('throws ParseError when the header dataSize is larger than the buffer', () => {
+      const bytes = buildFitFixture([REC]);
+      // dataSize lives at header offset 4..7 (uint32 LE). Make it huge.
+      bytes[4] = 0xff;
+      bytes[5] = 0xff;
+      bytes[6] = 0xff;
+      bytes[7] = 0x7f;
+      let thrown: unknown;
+      try {
+        parseFit(bytes, 'biglie.fit');
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBeInstanceOf(ParseError);
+      expect(thrown).not.toBeInstanceOf(RangeError);
+    });
+
+    it('throws ParseError on a definition declaring an oversized field', () => {
+      // Build a buffer: valid 12-byte header + a definition whose single field
+      // claims a 4-byte size but no data follows, then a data header.
+      const header: number[] = [12, 0x10, 0x00, 0x01];
+      // dataSize: definition(8) + data header(1) = 9 — but field over-reads.
+      const def = [0x40, 0x00, 0x00, 20, 0x00, 1, 0, 4, 0x85]; // 1 field, size 4
+      const dataHdr = [0x00]; // data record header, then nothing to read
+      const dataSize = def.length + dataHdr.length;
+      header.push(dataSize & 0xff, (dataSize >> 8) & 0xff, 0, 0);
+      for (const c of '.FIT') header.push(c.charCodeAt(0));
+      const bytes = new Uint8Array([...header, ...def, ...dataHdr]);
+      let thrown: unknown;
+      try {
+        parseFit(bytes, 'oversize.fit');
+      } catch (e) {
+        thrown = e;
+      }
+      expect(thrown).toBeInstanceOf(ParseError);
+      expect(thrown).not.toBeInstanceOf(RangeError);
+    });
+
+    it('fuzz: deterministic pseudo-random bodies always throw ParseError, never a non-ParseError', () => {
+      // Simple LCG for determinism (no Math.random).
+      let seed = 0x1234abcd;
+      const next = (): number => {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        return seed;
+      };
+      for (let iter = 0; iter < 200; iter++) {
+        const len = 12 + (next() % 64);
+        const body = new Uint8Array(len);
+        for (let i = 0; i < len; i++) body[i] = next() & 0xff;
+        // Plant a valid ".FIT" magic so we exercise the record decoder, not the
+        // early signature reject.
+        body[0] = 12; // header size
+        body[8] = 0x2e;
+        body[9] = 0x46;
+        body[10] = 0x49;
+        body[11] = 0x54; // ".FIT"
+        try {
+          parseFit(body, `fuzz-${iter}.fit`);
+          // If it didn't throw, that's fine (it produced a valid file).
+        } catch (e) {
+          expect(e).toBeInstanceOf(ParseError);
+        }
+      }
+    });
   });
 
   it('throws ParseError on a data record before any definition', () => {

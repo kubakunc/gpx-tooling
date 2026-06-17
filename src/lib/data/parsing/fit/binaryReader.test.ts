@@ -46,6 +46,16 @@ describe('BinaryReader', () => {
     expect(r.length).toBe(4);
   });
 
+  it('throws RangeError on reads past the end of the buffer', () => {
+    expect(() => new BinaryReader(new Uint8Array([1])).readUint16()).toThrow(RangeError);
+    expect(() => new BinaryReader(new Uint8Array([1, 2])).readUint32()).toThrow(RangeError);
+    expect(() => new BinaryReader(new Uint8Array([1])).readString(4)).toThrow(RangeError);
+    const r = new BinaryReader(new Uint8Array([1, 2, 3]));
+    expect(() => r.skip(10)).toThrow(RangeError);
+    expect(() => r.seek(99)).toThrow(RangeError);
+    expect(() => r.seek(-1)).toThrow(RangeError);
+  });
+
   it('detects FIT invalid sentinels per base type', () => {
     expect(isInvalid(0xff, BaseType.uint8)).toBe(true);
     expect(isInvalid(0x7f, BaseType.sint8)).toBe(true);

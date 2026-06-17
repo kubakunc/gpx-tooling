@@ -178,6 +178,47 @@ export function buildFitFixtureWithExtras(records: FitFixtureRecord[]): Uint8Arr
   return new Uint8Array([...header, ...body, 0x00, 0x00]);
 }
 
+/**
+ * Build a fixture exercising the compressed-timestamp path. Produces:
+ *   - definition localType 0 (full record incl. timestamp field 253)
+ *   - one normal data record (carries the full base timestamp via `rec`)
+ *   - definition localType 1 (record WITHOUT field 253 — timestamp comes from
+ *     the compressed header)
+ *   - one compressed-timestamp data record for localType 1 with `timeOffset`
+ *
+ * The compressed record reuses `rec`'s position so it decodes to a valid point;
+ * its timestamp must be derived from the header offset, not the body.
+ */
+export function buildFitFixtureCompressedTimestamp(
+  rec: FitFixtureRecord,
+  timeOffset: number
+): Uint8Array {
+  // Definition for localType 0 — full record with timestamp.
+  const body: number[] = [...definitionRecord(), ...dataRecord(rec)];
+
+  // Definition for localType 1 — same fields minus timestamp(253).
+  const ctFields = FIELDS.filter(([num]) => num !== 253);
+  const ctDef: number[] = [0x40 | 1, 0x00, 0x00];
+  pushU16LE(ctDef, RECORD_GLOBAL_NUM);
+  ctDef.push(ctFields.length);
+  for (const [num, size, baseType] of ctFields) ctDef.push(num, size, baseType);
+  body.push(...ctDef);
+
+  // Compressed-timestamp data record: header 0x80 | (localType<<5) | offset.
+  body.push(0x80 | (1 << 5) | (timeOffset & 0x1f));
+  pushU32LE(body, rec.latSemicircles ?? 0x7fffffff);
+  pushU32LE(body, rec.lonSemicircles ?? 0x7fffffff);
+  pushU16LE(body, rec.altitudeRaw ?? 0xffff);
+  body.push(rec.heartRate ?? 0xff);
+  pushU16LE(body, rec.power ?? 0xffff);
+
+  const header: number[] = [12, 0x10];
+  pushU16LE(header, 0x0100);
+  pushU32LE(header, body.length);
+  for (const c of '.FIT') header.push(c.charCodeAt(0));
+  return new Uint8Array([...header, ...body, 0x00, 0x00]);
+}
+
 /** Build a buffer with a 14-byte header (adds a 2-byte header CRC). */
 export function buildFitFixture14(records: FitFixtureRecord[]): Uint8Array {
   const body = buildBody(records);

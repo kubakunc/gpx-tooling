@@ -53,33 +53,54 @@ export class BinaryReader {
     return this.length - this.pos;
   }
 
+  /**
+   * Guard a read of `n` bytes starting at the current cursor. Throws a
+   * `RangeError` when the read would run past the end of the buffer — the
+   * untrusted FIT decoder converts these to `ParseError` at its boundary.
+   */
+  private ensure(n: number): void {
+    if (n < 0 || this.pos + n > this.length) {
+      throw new RangeError(
+        `FIT read out of bounds: need ${n} byte(s) at ${this.pos}, length ${this.length}`
+      );
+    }
+  }
+
   seek(pos: number): void {
+    if (pos < 0 || pos > this.length) {
+      throw new RangeError(`FIT seek out of bounds: ${pos}, length ${this.length}`);
+    }
     this.pos = pos;
   }
 
   skip(n: number): void {
+    this.ensure(n);
     this.pos += n;
   }
 
   readUint8(): number {
+    this.ensure(1);
     const v = this.view.getUint8(this.pos);
     this.pos += 1;
     return v;
   }
 
   readUint16(littleEndian = true): number {
+    this.ensure(2);
     const v = this.view.getUint16(this.pos, littleEndian);
     this.pos += 2;
     return v;
   }
 
   readUint32(littleEndian = true): number {
+    this.ensure(4);
     const v = this.view.getUint32(this.pos, littleEndian);
     this.pos += 4;
     return v;
   }
 
   readSint32(littleEndian = true): number {
+    this.ensure(4);
     const v = this.view.getInt32(this.pos, littleEndian);
     this.pos += 4;
     return v;
@@ -87,6 +108,7 @@ export class BinaryReader {
 
   /** Read `n` ASCII bytes as a string (no cursor rewind). */
   readString(n: number): string {
+    this.ensure(n);
     let s = '';
     for (let i = 0; i < n; i++) s += String.fromCharCode(this.readUint8());
     return s;
