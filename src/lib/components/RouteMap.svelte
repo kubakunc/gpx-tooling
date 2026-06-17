@@ -2,16 +2,28 @@
   import { onMount, onDestroy } from 'svelte';
   import type { Map as LeafletMap } from 'leaflet';
 
+  export interface LatLon {
+    lat: number;
+    lon: number;
+  }
+
   interface Props {
     variant: 'merge' | 'trim' | 'reduce';
+    /** Real route coords. When provided, drawn instead of the demo route. */
+    route?: LatLon[];
+    /** Trim: [startRatio, endRatio] of `route` to highlight as kept. */
+    keptRange?: [number, number];
+    /** Reduce: the simplified subset to overlay. */
+    simplified?: LatLon[];
   }
-  let { variant }: Props = $props();
+  let { variant, route, keptRange, simplified }: Props = $props();
 
   let el: HTMLDivElement;
   let map: LeafletMap | null = null;
 
-  // Exact route coords ported from the design's support.js.
-  const route: [number, number][] = [
+  // Exact demo route ported from the design's support.js — fallback when no
+  // real route is supplied so unwired states still look right.
+  const demoRoute: [number, number][] = [
     [49.292, 19.94],
     [49.295, 19.946],
     [49.299, 19.949],
@@ -29,6 +41,8 @@
     [49.336, 20.02],
     [49.339, 20.027]
   ];
+
+  const toLatLng = (p: LatLon): [number, number] => [p.lat, p.lon];
 
   onMount(async () => {
     const L = (await import('leaflet')).default;
@@ -54,12 +68,7 @@
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    const dot = (
-      p: [number, number],
-      fill: string,
-      stroke = '#fff',
-      r = 6
-    ) =>
+    const dot = (p: [number, number], fill: string, stroke = '#fff', r = 6) =>
       L.circleMarker(p, {
         radius: r,
         fillColor: fill,
@@ -68,40 +77,57 @@
         fillOpacity: 1
       }).addTo(map!);
 
+    const hasReal = route && route.length >= 2;
+    const coords: [number, number][] = hasReal ? route!.map(toLatLng) : demoRoute;
+
     if (variant === 'merge') {
-      // Merged route, 3 segments (3 files)
-      L.polyline(route, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(map);
-      L.polyline(route.slice(0, 7), { color: '#34d399', weight: 5 }).addTo(map);
-      L.polyline(route.slice(6, 12), { color: '#10b981', weight: 5 }).addTo(map);
-      L.polyline(route.slice(11), { color: '#059669', weight: 5 }).addTo(map);
-      dot(route[0], '#059669');
-      dot(route[route.length - 1], '#059669');
+      // Single emerald route over a white casing.
+      L.polyline(coords, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(map);
+      L.polyline(coords, { color: '#10b981', weight: 5 }).addTo(map);
+      dot(coords[0], '#059669');
+      dot(coords[coords.length - 1], '#059669');
     } else if (variant === 'trim') {
-      // Full faded track + kept segment + handles
-      L.polyline(route, { color: '#5a7196', weight: 4, opacity: 0.5, dashArray: '2 8' }).addTo(map);
-      const kept = route.slice(4, 12);
-      L.polyline(kept, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(map);
-      L.polyline(kept, { color: '#1d4ed8', weight: 5 }).addTo(map);
-      dot(route[0], '#cbd5e6', '#fff', 5);
-      dot(route[route.length - 1], '#cbd5e6', '#fff', 5);
-      dot(route[4], '#ffffff', '#1d4ed8', 7);
-      dot(route[11], '#1d4ed8', '#fff', 7);
+      // Faded full track + highlighted kept segment.
+      L.polyline(coords, { color: '#5a7196', weight: 4, opacity: 0.5, dashArray: '2 8' }).addTo(map);
+      const n = coords.length;
+      const [s, e] = keptRange ?? [0.25, 0.75];
+      const from = Math.max(0, Math.min(n - 1, Math.round(s * n)));
+      const to = Math.max(from + 1, Math.min(n, Math.round(e * n)));
+      const kept = coords.slice(from, to);
+      if (kept.length >= 2) {
+        L.polyline(kept, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(map);
+        L.polyline(kept, { color: '#1d4ed8', weight: 5 }).addTo(map);
+        dot(kept[0], '#ffffff', '#1d4ed8', 7);
+        dot(kept[kept.length - 1], '#1d4ed8', '#fff', 7);
+      }
+      dot(coords[0], '#cbd5e6', '#fff', 5);
+      dot(coords[n - 1], '#cbd5e6', '#fff', 5);
     } else {
-      // Reduce: original (dense) vs simplified (fewer vertices)
-      L.polyline(route, { color: '#9a8fc0', weight: 5, opacity: 0.6 }).addTo(map);
-      const simp = [route[0], route[3], route[6], route[9], route[12], route[15]];
+      // Reduce: original (faded) vs simplified overlay.
+      L.polyline(coords, { color: '#9a8fc0', weight: 5, opacity: 0.6 }).addTo(map);
+      const simp: [number, number][] =
+        simplified && simplified.length >= 2
+          ? simplified.map(toLatLng)
+          : hasReal
+            ? [coords[0], coords[coords.length - 1]]
+            : [
+                demoRoute[0],
+                demoRoute[3],
+                demoRoute[6],
+                demoRoute[9],
+                demoRoute[12],
+                demoRoute[15]
+              ];
       L.polyline(simp, { color: '#7c3aed', weight: 3 }).addTo(map);
       simp.forEach((p) => dot(p, '#6d28d9', '#fff', 4));
     }
 
-    // Wait for the container to finish its entry layout before measuring.
-    // Double rAF defers until after the next paint, so invalidateSize/fitBounds
-    // run against the settled element size rather than racing a fixed timeout.
+    // Defer measuring until the container's entry layout settles.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!map) return;
         map.invalidateSize();
-        map.fitBounds(L.latLngBounds(route), { padding: [22, 22] });
+        map.fitBounds(L.latLngBounds(coords), { padding: [22, 22] });
       });
     });
   });
