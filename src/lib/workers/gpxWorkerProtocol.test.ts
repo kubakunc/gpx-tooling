@@ -1,4 +1,3 @@
-// @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
 import { handleWorkerRequest } from './gpxWorkerProtocol';
 import { serializeGpx } from '../data/serialization/GpxSerializer';
@@ -12,23 +11,7 @@ const tp = (lat: number, lon: number): TrackPoint => ({
   sensors: {}
 });
 
-const GPX = `<?xml version="1.0"?>
-<gpx version="1.1"><trk><trkseg>
-<trkpt lat="0" lon="0"></trkpt>
-<trkpt lat="0" lon="1"></trkpt>
-</trkseg></trk></gpx>`;
-
 describe('handleWorkerRequest', () => {
-  it('parses GPX text', () => {
-    const res = handleWorkerRequest({ id: 1, type: 'parse', name: 'a.gpx', text: GPX });
-    expect(res.id).toBe(1);
-    expect(res.ok).toBe(true);
-    if (res.ok && res.type === 'parse') {
-      expect(res.result.points).toHaveLength(2);
-      expect(res.result.name).toBe('a.gpx');
-    }
-  });
-
   it('simplifies points', () => {
     const pts = [tp(0, 0), tp(0, 0.5), tp(0, 1)];
     const res = handleWorkerRequest({ id: 2, type: 'simplify', points: pts, epsilonMeters: 10 });
@@ -61,10 +44,17 @@ describe('handleWorkerRequest', () => {
     if (!res.ok) expect(res.error).toContain('Unknown');
   });
 
-  it('returns ok:false when an inner function throws (bad parse)', () => {
-    const res = handleWorkerRequest({ id: 5, type: 'parse', name: 'a.gpx', text: 'not xml' });
+  it('treats GPX parse as an unknown (non-worker) request type', () => {
+    // Parse is no longer a worker capability — it needs DOMParser (main thread).
+    // parse is intentionally not a worker request type
+    const res = handleWorkerRequest({
+      id: 5,
+      type: 'parse',
+      name: 'a.gpx',
+      text: 'not xml'
+    } as unknown as Parameters<typeof handleWorkerRequest>[0]);
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(typeof res.error).toBe('string');
+    if (!res.ok) expect(res.error).toContain('Unknown');
   });
 
   it('returns ok:false when serialize gets an unknown format', () => {
@@ -77,16 +67,5 @@ describe('handleWorkerRequest', () => {
     });
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toContain('Unsupported');
-  });
-
-  it('parses FIT bytes through importTrack', () => {
-    // A non-FIT byte array with a .fit name should fail gracefully (no throw).
-    const res = handleWorkerRequest({
-      id: 7,
-      type: 'parse',
-      name: 'a.fit',
-      bytes: new Uint8Array([0, 1, 2])
-    });
-    expect(res.ok).toBe(false);
   });
 });

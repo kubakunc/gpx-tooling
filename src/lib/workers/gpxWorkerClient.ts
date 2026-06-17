@@ -2,8 +2,7 @@ import type { TrackPoint } from '../domain/entities/TrackPoint';
 import {
   handleWorkerRequest,
   type WorkerRequest,
-  type WorkerResponse,
-  type ParseResultPayload
+  type WorkerResponse
 } from './gpxWorkerProtocol';
 
 /** Minimal structural view of the Worker we depend on (for testability). */
@@ -49,7 +48,6 @@ function errorEventMessage(event: unknown): string | null {
 
 /** A request payload without the correlation id (the client assigns it). */
 type WorkerRequestBody =
-  | Omit<Extract<WorkerRequest, { type: 'parse' }>, 'id'>
   | Omit<Extract<WorkerRequest, { type: 'simplify' }>, 'id'>
   | Omit<Extract<WorkerRequest, { type: 'serialize' }>, 'id'>;
 
@@ -126,12 +124,6 @@ export class GpxWorkerClient {
         resolve(handleWorkerRequest(full));
       }
     });
-  }
-
-  async runParse(name: string, content: { text?: string; bytes?: Uint8Array }): Promise<ParseResultPayload> {
-    const res = await this.run({ type: 'parse', name, text: content.text, bytes: content.bytes });
-    if (res.ok && res.type === 'parse') return res.result;
-    throw new Error(res.ok ? 'Unexpected response' : res.error);
   }
 
   async runSimplify(points: TrackPoint[], epsilonMeters: number): Promise<TrackPoint[]> {

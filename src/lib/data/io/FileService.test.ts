@@ -100,6 +100,25 @@ describe('pure helpers', () => {
   });
 });
 
+describe('default import path (main-thread parse, no worker)', () => {
+  it('the DEFAULT FileService parses real GPX end-to-end via the main thread', async () => {
+    // Regression guard for the worker/DOMParser import bug: a default
+    // FileService (no injected parser) must parse GPX on the main thread,
+    // yielding real points. It must not route parse through the worker.
+    isNativePlatform.mockReturnValue(false);
+    pickFiles.mockResolvedValue({
+      files: [{ name: 'real.gpx', data: toB64(GPX('Real')) }]
+    });
+    const svc = new FileService();
+    const files = await svc.pickAndImportGpx();
+    expect(files).toHaveLength(1);
+    expect(files[0].name).toBe('real.gpx');
+    expect(files[0].points).toHaveLength(2);
+    expect(files[0].points[0].latitude).toBeCloseTo(49.0, 4);
+    expect(files[0].points[0].elevation).toBe(100);
+  });
+});
+
 describe('pickAndImportGpx', () => {
   it('parses web base64 data into GpxFile[]', async () => {
     isNativePlatform.mockReturnValue(false);
@@ -244,7 +263,7 @@ describe('exportAndShare', () => {
 });
 
 describe('injectable GPX parser', () => {
-  it('routes GPX text through the injected parser (worker client by default)', async () => {
+  it('routes GPX text through the injected parser (main-thread importTrack by default)', async () => {
     isNativePlatform.mockReturnValue(false);
     const parseGpxText = vi
       .fn()

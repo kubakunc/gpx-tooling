@@ -136,14 +136,6 @@ describe('GpxWorkerClient with a worker', () => {
     void client;
   });
 
-  it('parses through the worker', async () => {
-    const fake = makeFakeWorker();
-    const client = new GpxWorkerClient({ createWorker: () => fake });
-    const GPX = `<?xml version="1.0"?><gpx version="1.1"><trk><trkseg><trkpt lat="0" lon="0"></trkpt><trkpt lat="0" lon="1"></trkpt></trkseg></trk></gpx>`;
-    const r = await client.runParse('a.gpx', { text: GPX });
-    expect(r.points).toHaveLength(2);
-  });
-
   it('dispose terminates the worker and resets', async () => {
     const fake = makeFakeWorker();
     const terminate = vi.spyOn(fake, 'terminate');
