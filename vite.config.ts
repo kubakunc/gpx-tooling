@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       provider: 'v8',
-      include: ['src/lib/domain/**', 'src/lib/data/**'],
+      include: ['src/lib/domain/**', 'src/lib/data/**', 'src/lib/stores/**'],
       thresholds: { lines: 90, functions: 90, branches: 90, statements: 90 }
     }
   }

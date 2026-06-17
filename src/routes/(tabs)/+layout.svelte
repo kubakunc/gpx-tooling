@@ -1,6 +1,7 @@
 <script lang="ts">
   import BottomNav from '$lib/components/BottomNav.svelte';
   import AdBanner from '$lib/components/AdBanner.svelte';
+  import Snackbar from '$lib/components/Snackbar.svelte';
   let { children } = $props();
 </script>
 
@@ -8,6 +9,7 @@
   <main class="flex-1 overflow-y-auto">
     {@render children()}
   </main>
+  <Snackbar />
   <BottomNav />
   <AdBanner />
 </div>
