@@ -76,7 +76,7 @@
       <div class="flex flex-col items-center justify-center px-6 py-20 text-center">
         <div class="text-[15px] font-bold text-ink">No files yet</div>
         <p class="mt-2 max-w-[260px] text-[13px] leading-[1.5]" style="color:#8a9099;">
-          Import two or more GPX files to merge them into a single route.
+          Import two or more GPX or FIT files to merge them into a single route.
         </p>
         <button
           type="button"
@@ -85,7 +85,7 @@
           disabled={busy}
           onclick={importMore}
         >
-          {#if busy}<Spinner /> Working…{:else}Import GPX files{/if}
+          {#if busy}<Spinner /> Working…{:else}Import GPX or FIT files{/if}
         </button>
       </div>
     {:else}

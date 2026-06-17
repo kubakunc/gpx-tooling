@@ -34,6 +34,8 @@
   let beforeProfile = $derived(elevationProfilePoints(points, 340, 104));
   let afterProfile = $derived(elevationProfilePoints(corrected, 340, 104));
 
+  let exportFilename = $derived(activeFile ? exportName(activeFile.name, 'elev') : '');
+
   async function importFile() {
     if (busy) return;
     busy = true;
@@ -55,7 +57,7 @@
     if (busy || !activeFile || corrected.length === 0) return;
     busy = true;
     try {
-      const name = exportName(activeFile.name, 'elev');
+      const name = exportFilename;
       const xml = serializeGpx(corrected, name);
       await fileService.exportAndShare(xml, name);
       showToast('Corrected file exported', 'success');
@@ -148,16 +150,30 @@
           GPS
         </div>
         <div
-          class="flex-1 rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f]"
+          class="relative flex-1 cursor-not-allowed rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f] opacity-50"
           style="padding-top:11px;padding-bottom:11px;border-color:#efece6;"
+          aria-disabled="true"
         >
           SRTM
+          <span
+            class="absolute right-[6px] top-[5px] rounded-full px-[6px] py-[1px] text-[8px] font-bold uppercase tracking-[0.08em]"
+            style="background:rgba(255,255,255,0.8);color:#b08b4a;"
+          >
+            Soon
+          </span>
         </div>
         <div
-          class="flex-1 rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f]"
+          class="relative flex-1 cursor-not-allowed rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f] opacity-50"
           style="padding-top:11px;padding-bottom:11px;border-color:#efece6;"
+          aria-disabled="true"
         >
           Mapbox
+          <span
+            class="absolute right-[6px] top-[5px] rounded-full px-[6px] py-[1px] text-[8px] font-bold uppercase tracking-[0.08em]"
+            style="background:rgba(255,255,255,0.8);color:#b08b4a;"
+          >
+            Soon
+          </span>
         </div>
       </div>
       <div class="px-6 pt-[6px] text-[11px]" style="color:#c2b48f;">
@@ -182,6 +198,9 @@
 
   {#if activeFile}
     <div class="px-6 pb-3 pt-2">
+      <div class="mb-[8px] text-center text-[12px]" style="color:#b08b4a;">
+        Saves as: <span class="font-bold">{exportFilename}</span>
+      </div>
       <button
         type="button"
         class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"

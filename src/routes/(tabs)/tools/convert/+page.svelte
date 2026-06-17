@@ -22,8 +22,14 @@
   );
   let points = $derived(activeFile?.points ?? []);
   let hasSensors = $derived(points.some((p) => p.sensors.hr !== undefined || p.sensors.cadence !== undefined || p.sensors.power !== undefined));
+  // KML has no schema for HR/cadence/power, so the toggle is meaningless there.
+  let sensorsUnsupported = $derived(target === 'kml');
+  let sensorsDisabled = $derived(!hasSensors || sensorsUnsupported);
+  // Effective ON state: only when sensors exist, are wanted, and the format can store them.
+  let sensorsOn = $derived(hasSensors && keepSensors && !sensorsUnsupported);
   // Source extension shown in the "From" card (uppercase, defaults to GPX).
   let sourceExt = $derived((activeFile?.name.match(/\.(\w+)$/)?.[1] ?? 'gpx').toUpperCase());
+  let exportFilename = $derived(activeFile ? exportName(activeFile.name, '', target) : '');
 
   async function importFile() {
     if (busy) return;
@@ -46,8 +52,8 @@
     if (busy || !activeFile || points.length === 0) return;
     busy = true;
     try {
-      const out = keepSensors ? points : stripSensors(points);
-      const name = exportName(activeFile.name, '', target);
+      const out = sensorsOn ? points : stripSensors(points);
+      const name = exportFilename;
       const data = serializeAs(target, out, name);
       await fileService.exportAndShare(data, name);
       showToast(`Converted to ${target.toUpperCase()}`, 'success');
@@ -142,16 +148,18 @@
         <button
           type="button"
           class="flex items-center gap-3 rounded-[16px] border bg-white px-[15px] py-[13px] text-left"
-          style="border-color:#efece6;{hasSensors ? '' : 'opacity:0.5;'}"
-          disabled={!hasSensors}
+          style="border-color:#efece6;{sensorsDisabled ? 'opacity:0.5;' : ''}"
+          disabled={sensorsDisabled}
           onclick={() => (keepSensors = !keepSensors)}
         >
           <div class="flex-1 text-[14px] font-bold text-ink">
             Sensor data <span class="font-semibold" style="color:#9aa0a8;">HR · CAD · PWR</span>
           </div>
-          <Toggle on={hasSensors && keepSensors} accent={t.icon} />
+          <Toggle on={sensorsOn} accent={t.icon} />
         </button>
-        {#if !hasSensors}
+        {#if sensorsUnsupported}
+          <div class="px-1 text-[11px]" style="color:#b9bcc2;">KML can't store sensor data.</div>
+        {:else if !hasSensors}
           <div class="px-1 text-[11px]" style="color:#b9bcc2;">This track has no sensor data.</div>
         {/if}
       </div>
@@ -160,6 +168,9 @@
 
   {#if activeFile}
     <div class="px-6 pb-3 pt-2">
+      <div class="mb-[8px] text-center text-[12px]" style="color:#b06a8c;">
+        Saves as: <span class="font-bold">{exportFilename}</span>
+      </div>
       <button
         type="button"
         class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"

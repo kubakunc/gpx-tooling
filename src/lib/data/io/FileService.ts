@@ -84,10 +84,10 @@ export class FileService {
     let picked;
     try {
       const result = await FilePicker.pickFiles({
-        // Accept GPX and FIT. (FIT has no registered MIME; some pickers honor
-        // the extension list, so we keep the picker permissive and validate on
-        // import.)
-        types: ['application/gpx+xml', 'application/octet-stream'],
+        // Accept any file so .fit is selectable: FIT has no registered MIME and
+        // a `types` allow-list hides it in the native picker. We validate the
+        // selection on import (extension + FIT magic bytes in TrackImporter),
+        // rejecting non-track files with a friendly error.
         readData: true
       });
       picked = result.files;
