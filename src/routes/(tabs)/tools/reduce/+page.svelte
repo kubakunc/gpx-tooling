@@ -25,9 +25,11 @@
   let route = $derived(points.map((p) => ({ lat: p.latitude, lon: p.longitude })));
 
   let epsilon = $derived(percentToEpsilon(percent));
+  // TODO(phase7): offload simplify+serialize to the Web Worker and debounce the slider (heavy on large tracks).
   let reduced = $derived(points.length ? simplifyRdp(points, epsilon) : []);
   let simplified = $derived(reduced.map((p) => ({ lat: p.latitude, lon: p.longitude })));
 
+  // TODO(phase7): offload simplify+serialize to the Web Worker and debounce the slider (heavy on large tracks).
   let beforeXml = $derived(points.length ? serializeGpx(points, 'orig') : '');
   let afterXml = $derived(reduced.length ? serializeGpx(reduced, 'reduced') : '');
   let beforeBytes = $derived(new TextEncoder().encode(beforeXml).length);

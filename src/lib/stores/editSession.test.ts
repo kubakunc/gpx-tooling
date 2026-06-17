@@ -41,6 +41,43 @@ describe('editSession store', () => {
     expect(get(editSession).endRatio).toBe(1);
   });
 
+  it('keeps start < end across interleaved setter calls', () => {
+    // setEnd near 0 then setStart: each setter must preserve the invariant by
+    // nudging the *other* bound when the gap can no longer fit.
+    setEndRatio(0);
+    let s = get(editSession);
+    expect(s.startRatio).toBeGreaterThanOrEqual(0);
+    expect(s.endRatio).toBeLessThanOrEqual(1);
+    expect(s.startRatio).toBeLessThan(s.endRatio);
+
+    setStartRatio(1);
+    s = get(editSession);
+    expect(s.startRatio).toBeGreaterThanOrEqual(0);
+    expect(s.endRatio).toBeLessThanOrEqual(1);
+    expect(s.startRatio).toBeLessThan(s.endRatio);
+
+    // Exhaustive interleaving over a grid of ratios; invariant must always hold.
+    resetEditSession();
+    const grid = [-1, 0, 0.1, 0.5, 0.9, 1, 2];
+    for (const a of grid) {
+      for (const b of grid) {
+        setEndRatio(a);
+        setStartRatio(b);
+        const v1 = get(editSession);
+        expect(v1.startRatio).toBeGreaterThanOrEqual(0);
+        expect(v1.endRatio).toBeLessThanOrEqual(1);
+        expect(v1.startRatio).toBeLessThan(v1.endRatio);
+
+        setStartRatio(a);
+        setEndRatio(b);
+        const v2 = get(editSession);
+        expect(v2.startRatio).toBeGreaterThanOrEqual(0);
+        expect(v2.endRatio).toBeLessThanOrEqual(1);
+        expect(v2.startRatio).toBeLessThan(v2.endRatio);
+      }
+    }
+  });
+
   it('setEpsilon clamps to a non-negative number', () => {
     setEpsilon(25);
     expect(get(editSession).epsilon).toBe(25);

@@ -28,8 +28,16 @@
   let end = $derived($editSession.endRatio);
 
   let kept = $derived(points.length >= 2 ? safeTrim(points, start, end) : []);
-  let startTime = $derived(formatDuration(durationSeconds(points.slice(0, Math.round(start * points.length) || 1))));
-  let endTime = $derived(formatDuration(durationSeconds(points.slice(0, Math.round(end * points.length) || 1))));
+
+  // Compute kept-segment indices the same way trimGpx does, clamped explicitly
+  // so labels match the kept segment exactly (no NaN on all-null-time or
+  // single-point tracks).
+  const idx = (r: number) => Math.min(points.length, Math.max(0, Math.round(r * points.length)));
+  let startIdx = $derived(idx(start));
+  let endIdx = $derived(idx(end));
+  // Elapsed time up to the kept-segment boundaries, measured from the track start.
+  let startTime = $derived(formatDuration(durationSeconds(points.slice(0, startIdx))));
+  let endTime = $derived(formatDuration(durationSeconds(points.slice(0, endIdx))));
   let keptLabel = $derived(`${formatKm(totalDistanceMeters(kept))} · ${formatDuration(durationSeconds(kept))}`);
 
   let profile = $derived(elevationProfilePoints(points, 340, 90));
@@ -49,7 +57,6 @@
       const files = await fileService.pickAndImportGpx();
       if (files.length === 0) return;
       const added = addFiles(files);
-      setFileId(added[0].id);
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');

@@ -27,15 +27,21 @@ export function setFileId(fileId: string | null): void {
 
 export function setStartRatio(ratio: number): void {
   editSession.update((s) => {
-    const start = Math.min(clamp01(ratio), s.endRatio - MIN_GAP);
-    return { ...s, startRatio: Math.max(0, start) };
+    // Move only the start bound, keeping at least MIN_GAP below end.
+    const start = Math.max(0, Math.min(clamp01(ratio), s.endRatio - MIN_GAP));
+    // If end sits so low that the gap can't fit, nudge end up (capped at 1).
+    const end = Math.min(1, Math.max(s.endRatio, start + MIN_GAP));
+    return { ...s, startRatio: start, endRatio: end };
   });
 }
 
 export function setEndRatio(ratio: number): void {
   editSession.update((s) => {
-    const end = Math.max(clamp01(ratio), s.startRatio + MIN_GAP);
-    return { ...s, endRatio: Math.min(1, end) };
+    // Move only the end bound, keeping at least MIN_GAP above start.
+    const end = Math.min(1, Math.max(clamp01(ratio), s.startRatio + MIN_GAP));
+    // If start sits so high that the gap can't fit, nudge start down (>= 0).
+    const start = Math.max(0, Math.min(s.startRatio, end - MIN_GAP));
+    return { ...s, startRatio: start, endRatio: end };
   });
 }
 

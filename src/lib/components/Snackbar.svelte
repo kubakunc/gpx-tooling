@@ -8,7 +8,11 @@
   };
 </script>
 
-<div class="pointer-events-none fixed inset-x-0 bottom-[84px] z-[1000] flex flex-col items-center gap-2 px-6">
+<div
+  role="status"
+  aria-live="polite"
+  class="pointer-events-none fixed inset-x-0 bottom-[84px] z-[1000] flex flex-col items-center gap-2 px-6"
+>
   {#each $toasts as toast (toast.id)}
     {@const c = colors[toast.kind]}
     <button
