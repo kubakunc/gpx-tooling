@@ -42,7 +42,7 @@
   }
 
   async function mergeAndExport() {
-    if (busy || $loadedFiles.length === 0) return;
+    if (busy || $loadedFiles.length < 2) return;
     busy = true;
     try {
       const xml = serializeGpx(merged, 'merged');
@@ -183,10 +183,15 @@
 
   {#if $loadedFiles.length > 0}
     <div class="px-6 pb-3 pt-2">
+      {#if $loadedFiles.length < 2}
+        <div class="pb-[10px] text-center text-[12px] font-semibold" style="color:#8a9099;">
+          Add another file to merge.
+        </div>
+      {/if}
       <button
-        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
+        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
-        disabled={busy}
+        disabled={busy || $loadedFiles.length < 2}
         onclick={mergeAndExport}
       >
         {#if busy}<Spinner /> Working…{:else}Merge &amp; export{/if}

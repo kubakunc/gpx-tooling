@@ -23,6 +23,7 @@
       Preview — not functional yet
     </div>
 
+    <div class="opacity-60 pointer-events-none">
     <div class="mx-6 mt-2 flex items-center gap-3">
       <div
         class="flex-1 rounded-[18px] border bg-white p-4 text-center"
@@ -86,6 +87,7 @@
         <Toggle on={false} accent={t.icon} />
       </div>
     </div>
+    </div>
   </div>
 
   <div class="px-6 pb-3 pt-2">
@@ -95,7 +97,7 @@
       class="h-[56px] w-full rounded-[20px] text-[16px] font-extrabold text-white"
       style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
     >
-      Convert → ride_morning.tcx
+      Convert format
     </button>
   </div>
 </div>

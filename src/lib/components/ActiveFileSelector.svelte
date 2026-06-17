@@ -35,10 +35,13 @@
     aria-haspopup={files.length > 1 ? 'listbox' : undefined}
     aria-expanded={files.length > 1 ? open : undefined}
   >
-    <div class="h-5 w-2 shrink-0 rounded-[4px]" style="background:{accent};"></div>
-    <div class="truncate text-[14px] font-bold" style="color:{title};">{active.name}</div>
+    <div class="h-7 w-2 shrink-0 rounded-[4px]" style="background:{accent};"></div>
+    <div class="min-w-0 text-left">
+      <div class="text-[9px] font-bold uppercase tracking-[0.1em] text-ink-faint">Source</div>
+      <div class="truncate text-[14px] font-bold" style="color:{title};">{active.name}</div>
+    </div>
     {#if files.length > 1}
-      <span class="shrink-0 text-[12px]" style="color:{title};">▾</span>
+      <span class="ml-[2px] shrink-0 text-[11px] font-extrabold" style="color:{accent};">Change ▾</span>
     {/if}
   </button>
 

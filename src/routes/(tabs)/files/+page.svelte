@@ -2,6 +2,7 @@
   import Spinner from '$lib/components/Spinner.svelte';
   import type { LoadedFile } from '$lib/stores/loadedFiles';
   import { loadedFiles, addFiles, removeFile } from '$lib/stores/loadedFiles';
+  import { setFileId } from '$lib/stores/editSession';
   import { fileService } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { totalDistanceMeters, elevationGainMeters, durationSeconds } from '$lib/domain/usecases/stats';
@@ -19,7 +20,8 @@
     try {
       const files = await fileService.pickAndImportGpx();
       if (files.length === 0) return;
-      addFiles(files);
+      const added = addFiles(files);
+      if (added.length > 0) setFileId(added[0].id);
       showToast(`Imported ${files.length} file${files.length === 1 ? '' : 's'}`, 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');

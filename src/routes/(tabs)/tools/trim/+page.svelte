@@ -158,7 +158,7 @@
 
         <div class="mt-[10px] flex items-center justify-between">
           <div class="rounded-[11px] px-[11px] py-[7px]" style="background:{t.tile};">
-            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Cut before</div>
+            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">From</div>
             <div class="text-[15px] font-extrabold" style="color:{t.title};">{startTime}</div>
           </div>
           <div class="text-center">
@@ -166,7 +166,7 @@
             <div class="text-[15px] font-extrabold" style="color:{t.button};">{keptLabel}</div>
           </div>
           <div class="rounded-[11px] px-[11px] py-[7px] text-right" style="background:{t.tile};">
-            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Cut after</div>
+            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">To</div>
             <div class="text-[15px] font-extrabold" style="color:{t.title};">{endTime}</div>
           </div>
         </div>

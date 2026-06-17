@@ -23,6 +23,7 @@
       Preview — not functional yet
     </div>
 
+    <div class="opacity-60 pointer-events-none">
     <div
       class="mx-6 my-[14px] rounded-[22px] border bg-white px-[14px] pb-3 pt-4"
       style="border-color:#f3ead2;box-shadow:0 8px 22px {rgba(t.icon, 0.1)};"
@@ -98,6 +99,7 @@
         <div class="text-[13px] font-extrabold" style="color:{t.button};">Medium</div>
       </div>
       <Slider percent={55} accent={t.icon} trackBg="#f1ead9" />
+    </div>
     </div>
   </div>
 

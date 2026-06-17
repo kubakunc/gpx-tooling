@@ -22,6 +22,7 @@
       Preview — not functional yet
     </div>
 
+    <div class="opacity-60 pointer-events-none">
     <div class="mx-6 mt-[6px] flex gap-[10px]">
       <div
         class="flex flex-1 items-center gap-2 rounded-[12px] px-3 py-[10px]"
@@ -123,6 +124,7 @@
         <div class="text-[20px] font-extrabold text-ink">+1.6%</div>
       </div>
     </div>
+    </div>
   </div>
 
   <div class="flex gap-3 px-6 pb-3 pt-2">
@@ -135,6 +137,8 @@
       Save comparison
     </button>
     <button
+      type="button"
+      onclick={notYet}
       class="h-[56px] w-[56px] rounded-[20px] text-[18px]"
       style="background:{t.tile};color:{t.button};"
       aria-label="Reset"
