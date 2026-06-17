@@ -12,10 +12,18 @@
   import { totalDistanceMeters, elevationGainMeters, durationSeconds } from '$lib/domain/usecases/stats';
   import { formatKm, formatGain, formatDuration, exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.merge;
 
   let busy = $state(false);
+
+  // Preload an interstitial as soon as the user has files loaded, so it's ready
+  // after export. Reactive (not onMount) to cover the open-empty → import flow;
+  // prepareInterstitial is idempotent, so re-runs are safe.
+  $effect(() => {
+    if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
+  });
 
   const rowBg = (i: number) => [t.icon, '#34d399', t.button][i % 3];
 
@@ -49,6 +57,8 @@
       const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
       await fileService.exportAndShare(xml, name);
       showToast('Merged file exported', 'success');
+      // Only after a successful export, never mid-operation.
+      void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {
@@ -182,7 +192,7 @@
   </div>
 
   {#if $loadedFiles.length > 0}
-    <div class="px-6 pb-3 pt-2">
+    <div class="px-6 pb-5 pt-2">
       {#if $loadedFiles.length < 2}
         <div class="pb-[10px] text-center text-[12px] font-semibold" style="color:#8a9099;">
           Add another file to merge.

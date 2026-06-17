@@ -13,11 +13,19 @@
   import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
   import { exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.elevation;
   const LEVEL_LABEL = { low: 'Low', medium: 'Medium', high: 'High' } as const;
 
   let busy = $state(false);
+
+  // Preload an interstitial as soon as the user has files loaded, so it's ready
+  // after export. Reactive (not onMount) to cover the open-empty → import flow;
+  // prepareInterstitial is idempotent, so re-runs are safe.
+  $effect(() => {
+    if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
+  });
   let percent = $state(55);
 
   let activeFile = $derived(
@@ -61,6 +69,7 @@
       const xml = serializeGpx(corrected, name);
       await fileService.exportAndShare(xml, name);
       showToast('Corrected file exported', 'success');
+      void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {
@@ -197,7 +206,7 @@
   </div>
 
   {#if activeFile}
-    <div class="px-6 pb-3 pt-2">
+    <div class="px-6 pb-5 pt-2">
       <div class="mb-[8px] text-center text-[12px]" style="color:#b08b4a;">
         Saves as: <span class="font-bold">{exportFilename}</span>
       </div>
