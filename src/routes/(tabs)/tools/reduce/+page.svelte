@@ -5,19 +5,22 @@
   import Spinner from '$lib/components/Spinner.svelte';
   import ActiveFileSelector from '$lib/components/ActiveFileSelector.svelte';
   import { toolThemes, rgba } from '$lib/toolThemes';
+  import type { TrackPoint } from '$lib/domain/entities/TrackPoint';
   import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
   import { editSession, setFileId, setEpsilon, resetEditSession } from '$lib/stores/editSession';
   import { fileService } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
-  import { simplifyRdp } from '$lib/domain/usecases/simplify';
   import { percentToEpsilon, simplificationLabel } from '$lib/domain/usecases/reduceMapping';
   import { formatCount, formatBytes, exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import { gpxWorkerClient } from '$lib/workers/gpxWorkerClient';
+  import { debounce } from '$lib/util/debounce';
   import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.reduce;
 
   let busy = $state(false);
+  let calculating = $state(false);
 
   // Preload an interstitial as soon as the user has files loaded, so it's ready
   // after export. Reactive (not onMount) to cover the open-empty → import flow;
@@ -36,17 +39,52 @@
   let route = $derived(points.map((p) => ({ lat: p.latitude, lon: p.longitude })));
 
   let epsilon = $derived(percentToEpsilon(percent));
-  // TODO(phase7): offload simplify+serialize to the Web Worker and debounce the slider (heavy on large tracks).
-  let reduced = $derived(points.length ? simplifyRdp(points, epsilon) : []);
+
+  // Heavy work (RDP + serialize) runs off the main thread via the worker client
+  // (sync fallback when no Worker). Debounced so dragging the slider doesn't
+  // recompute per pixel. A request token guards against out-of-order results.
+  let reduced = $state<TrackPoint[]>([]);
+  let afterXml = $state('');
   let simplified = $derived(reduced.map((p) => ({ lat: p.latitude, lon: p.longitude })));
 
-  // TODO(phase7): offload simplify+serialize to the Web Worker and debounce the slider (heavy on large tracks).
   let beforeXml = $derived(points.length ? serializeGpx(points, 'orig') : '');
-  let afterXml = $derived(reduced.length ? serializeGpx(reduced, 'reduced') : '');
   let beforeBytes = $derived(new TextEncoder().encode(beforeXml).length);
   let afterBytes = $derived(new TextEncoder().encode(afterXml).length);
 
   let detailLabel = $derived(simplificationLabel(percent));
+
+  let recomputeToken = 0;
+  async function recompute(pts: TrackPoint[], eps: number) {
+    const token = ++recomputeToken;
+    if (pts.length === 0) {
+      reduced = [];
+      afterXml = '';
+      calculating = false;
+      return;
+    }
+    calculating = true;
+    try {
+      const out = await gpxWorkerClient.runSimplify(pts, eps);
+      const xml = await gpxWorkerClient.runSerialize(out, 'reduced', 'gpx');
+      if (token !== recomputeToken) return; // a newer request superseded this one
+      reduced = out;
+      afterXml = xml;
+    } catch (e) {
+      if (token !== recomputeToken) return;
+      showToast(e instanceof Error ? e.message : 'Reduce failed', 'error');
+    } finally {
+      if (token === recomputeToken) calculating = false;
+    }
+  }
+
+  const debouncedRecompute = debounce(
+    (pts: TrackPoint[], eps: number) => void recompute(pts, eps),
+    180
+  );
+
+  $effect(() => {
+    debouncedRecompute(points, epsilon);
+  });
 
   async function importFile() {
     if (busy) return;
@@ -66,7 +104,7 @@
   }
 
   async function reduceAndSave() {
-    if (busy || !activeFile || reduced.length < 2) return;
+    if (busy || calculating || !activeFile || reduced.length < 2) return;
     busy = true;
     try {
       // Keep epsilon in the shared edit session for continuity.
@@ -132,9 +170,11 @@
         </div>
         <div class="flex gap-3 bg-white px-4 pb-4 pt-[14px]">
           <div class="flex-1 rounded-[14px] p-3" style="background:#f6f1fd;">
-            <div class="text-[10px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Points</div>
+            <div class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">
+              Points {#if calculating}<Spinner />{/if}
+            </div>
             <div class="mt-[2px] text-[18px] font-extrabold" style="color:{t.title};">
-              <span style="color:#b3a3d6;">{formatCount(points.length)}</span> → {formatCount(reduced.length)}
+              <span style="color:#b3a3d6;">{formatCount(points.length)}</span> → {calculating ? 'calculating…' : formatCount(reduced.length)}
             </div>
           </div>
           <div class="flex-1 rounded-[14px] p-3" style="background:#f6f1fd;">
@@ -170,10 +210,10 @@
       <button
         class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
-        disabled={busy || reduced.length < 2}
+        disabled={busy || calculating || reduced.length < 2}
         onclick={reduceAndSave}
       >
-        {#if busy}<Spinner /> Working…{:else}Reduce &amp; save{/if}
+        {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Reduce &amp; save{/if}
       </button>
     </div>
   {/if}
