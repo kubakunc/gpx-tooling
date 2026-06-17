@@ -11,7 +11,7 @@
 </script>
 
 <nav class="flex h-[66px] border-t border-line bg-screen">
-  {#each items as item}
+  {#each items as item (item.href)}
     {@const active = item.match(pathname)}
     <a
       href={item.href}

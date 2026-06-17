@@ -44,7 +44,6 @@
       boxZoom: false,
       keyboard: false,
       touchZoom: false,
-      tap: false,
       attributionControl: true
     };
 
@@ -95,11 +94,16 @@
       simp.forEach((p) => dot(p, '#6d28d9', '#fff', 4));
     }
 
-    setTimeout(() => {
-      if (!map) return;
-      map.invalidateSize();
-      map.fitBounds(L.latLngBounds(route), { padding: [22, 22] });
-    }, 280);
+    // Wait for the container to finish its entry layout before measuring.
+    // Double rAF defers until after the next paint, so invalidateSize/fitBounds
+    // run against the settled element size rather than racing a fixed timeout.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!map) return;
+        map.invalidateSize();
+        map.fitBounds(L.latLngBounds(route), { padding: [22, 22] });
+      });
+    });
   });
 
   onDestroy(() => {

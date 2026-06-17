@@ -67,7 +67,7 @@
 </div>
 
 <div class="grid grid-cols-2 gap-[11px] px-6 pt-[6px]">
-  {#each tiles as t}
+  {#each tiles as t (t.key)}
     {@const theme = toolThemes[t.key]}
     <ToolTile
       href={t.href}
