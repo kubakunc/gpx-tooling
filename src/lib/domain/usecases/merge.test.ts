@@ -23,4 +23,9 @@ describe('mergeChronologically', () => {
   it('returns [] for no input', () => {
     expect(mergeChronologically([])).toEqual([]);
   });
+  it('keeps original order among purely untimed points', () => {
+    const a = [tp(1, null), tp(2, null), tp(3, null)];
+    const r = mergeChronologically([a]);
+    expect(r.map((p) => p.latitude)).toEqual([1, 2, 3]);
+  });
 });

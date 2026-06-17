@@ -34,4 +34,13 @@ describe('parseGpx', () => {
   it('throws ParseError when there are no trackpoints', () => {
     expect(() => parseGpx('<?xml version="1.0"?><gpx></gpx>', 'x.gpx')).toThrow(ParseError);
   });
+  it('throws ParseError when a trackpoint is missing lat/lon', () => {
+    const xml = '<?xml version="1.0"?><gpx><trk><trkseg><trkpt lon="0"></trkpt></trkseg></trk></gpx>';
+    expect(() => parseGpx(xml, 'x.gpx')).toThrow(ParseError);
+  });
+  it('treats an unparseable time as null', () => {
+    const xml = '<?xml version="1.0"?><gpx><trk><trkseg><trkpt lat="1" lon="0"><time>not-a-date</time></trkpt></trkseg></trk></gpx>';
+    const f = parseGpx(xml, 'x.gpx');
+    expect(f.points[0].time).toBeNull();
+  });
 });
