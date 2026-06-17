@@ -11,11 +11,13 @@ export function repairElevation(points: TrackPoint[], opts: RepairOptions = {}):
     if (prev.elevation === null || cur.elevation === null || next.elevation === null) continue;
     const jump = Math.abs(cur.elevation - prev.elevation);
     let suddenInTime = false;
+    // Intentionally checks only the gap to the PREVIOUS point; the isolated-outlier
+    // branch covers the untimed / after-gap case.
     if (cur.time && prev.time) {
       suddenInTime = (cur.time.getTime() - prev.time.getTime()) / 1000 < minSeconds;
     }
+    // The prev-side magnitude is already guaranteed by the outer `jump > maxJump` guard.
     const isolatedOutlier =
-      Math.abs(cur.elevation - prev.elevation) > maxJump &&
       Math.abs(cur.elevation - next.elevation) > maxJump &&
       Math.sign(cur.elevation - prev.elevation) === Math.sign(cur.elevation - next.elevation);
     if (jump > maxJump && (suddenInTime || isolatedOutlier)) {

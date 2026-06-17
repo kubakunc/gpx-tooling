@@ -8,5 +8,5 @@ export function trimGpx(points: TrackPoint[], startRatio: number, endRatio: numb
   const n = points.length;
   const start = Math.round(startRatio * n);
   const end = Math.round(endRatio * n);
-  return points.slice(start, end + 1);
+  return points.slice(start, end);
 }

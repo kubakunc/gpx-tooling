@@ -12,7 +12,9 @@ export function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: 
 
 export interface LatLon { lat: number; lon: number; }
 
-// Local equirectangular projection to meters, origin at `a`.
+// Local equirectangular projection to meters, origin at `a`. This assumes short
+// segments and is NOT antimeridian-safe (acceptable for GPX track segments, which
+// are densely sampled and never straddle ±180° longitude).
 function project(p: LatLon, originLat: number): { x: number; y: number } {
   return {
     x: R * toRad(p.lon) * Math.cos(toRad(originLat)),
@@ -20,6 +22,8 @@ function project(p: LatLon, originLat: number): { x: number; y: number } {
   };
 }
 
+// Uses the local equirectangular `project` above, so it inherits the short-segment /
+// non-antimeridian-safe assumption (fine for GPX track segments).
 export function perpendicularDistanceMeters(p: LatLon, a: LatLon, b: LatLon): number {
   const o = a.lat;
   const pp = project(p, o), pa = project(a, o), pb = project(b, o);
