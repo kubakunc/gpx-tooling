@@ -1,14 +1,25 @@
 <script lang="ts">
   import { Capacitor } from '@capacitor/core';
+  import { bannerHeight } from '$lib/ads/AdManager';
 
-  // Reserve a 50px strip so content never sits under the banner.
-  // Native: the AdMob banner overlays this area, so render it transparent/empty.
-  // Web/preview: show the existing placeholder text.
+  // Reserve a strip so content never sits under the banner.
+  // Native: the AdMob adaptive banner height is device-computed (not a fixed
+  // 50px), so reserve max(measured, fallback) and clear the home indicator via
+  // the bottom safe-area inset. The native banner overlays this strip.
+  // Web/preview: keep the existing fixed-height placeholder.
   const isNative = Capacitor.isNativePlatform();
+
+  // Fallback until the native SizeChanged event reports the real height.
+  const FALLBACK_HEIGHT = 50;
+  let reserved = $derived(Math.max($bannerHeight, FALLBACK_HEIGHT));
 </script>
 
 {#if isNative}
-  <div class="h-[50px] border-t border-line" aria-hidden="true"></div>
+  <div
+    class="border-t border-line"
+    style="height:{reserved}px;padding-bottom:env(safe-area-inset-bottom);"
+    aria-hidden="true"
+  ></div>
 {:else}
   <div
     class="flex h-[50px] items-center justify-center border-t border-line bg-ad text-[11px] tracking-[0.1em]"
