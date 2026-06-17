@@ -12,10 +12,17 @@
   import { totalDistanceMeters, elevationGainMeters, durationSeconds } from '$lib/domain/usecases/stats';
   import { formatKm, formatGain, formatDuration, exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import { onMount } from 'svelte';
+  import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.merge;
 
   let busy = $state(false);
+
+  // Preload an interstitial while the user edits so it's ready after export.
+  onMount(() => {
+    if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
+  });
 
   const rowBg = (i: number) => [t.icon, '#34d399', t.button][i % 3];
 
@@ -49,6 +56,8 @@
       const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
       await fileService.exportAndShare(xml, name);
       showToast('Merged file exported', 'success');
+      // Only after a successful export, never mid-operation.
+      void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {

@@ -10,12 +10,19 @@
   import { showToast } from '$lib/stores/toast';
   import { EXPORT_FORMATS, type ExportFormat, serializeAs, stripSensors } from '$lib/domain/usecases/convert';
   import { exportName } from '$lib/domain/usecases/format';
+  import { onMount } from 'svelte';
+  import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.convert;
 
   let busy = $state(false);
   let target = $state<ExportFormat>('tcx');
   let keepSensors = $state(true);
+
+  // Preload an interstitial while the user edits so it's ready after export.
+  onMount(() => {
+    if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
+  });
 
   let activeFile = $derived(
     $loadedFiles.find((f) => f.id === $editSession.fileId) ?? $loadedFiles[0] ?? null
@@ -57,6 +64,7 @@
       const data = serializeAs(target, out, name);
       await fileService.exportAndShare(data, name);
       showToast(`Converted to ${target.toUpperCase()}`, 'success');
+      void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Conversion failed', 'error');
     } finally {

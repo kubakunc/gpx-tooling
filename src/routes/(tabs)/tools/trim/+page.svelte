@@ -14,10 +14,17 @@
   import { formatKm, formatDuration, exportName } from '$lib/domain/usecases/format';
   import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import { onMount } from 'svelte';
+  import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.trim;
 
   let busy = $state(false);
+
+  // Preload an interstitial while the user edits so it's ready after export.
+  onMount(() => {
+    if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
+  });
 
   // Active file: editSession.fileId if it still exists, else the first loaded.
   let activeFile = $derived(
@@ -77,6 +84,7 @@
       const name = exportName(activeFile.name, 'trimmed');
       await fileService.exportAndShare(xml, name);
       showToast('Trimmed file exported', 'success');
+      void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {

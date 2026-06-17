@@ -13,10 +13,17 @@
   import { percentToEpsilon, simplificationLabel } from '$lib/domain/usecases/reduceMapping';
   import { formatCount, formatBytes, exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import { onMount } from 'svelte';
+  import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.reduce;
 
   let busy = $state(false);
+
+  // Preload an interstitial while the user edits so it's ready after export.
+  onMount(() => {
+    if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
+  });
   // "Detail kept" percentage (0–100); maps to epsilon via percentToEpsilon.
   // Default to a sensible Medium.
   let percent = $state(50);
@@ -66,6 +73,7 @@
       const name = exportName(activeFile.name, 'reduced');
       await fileService.exportAndShare(afterXml, name);
       showToast('Reduced file exported', 'success');
+      void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
     } finally {
