@@ -1,4 +1,5 @@
 import type { TrackPoint } from '../../domain/entities/TrackPoint';
+import { formatCoord, formatNum } from './format';
 
 function esc(s: string): string {
   return s
@@ -15,7 +16,7 @@ function esc(s: string): string {
  */
 export function serializeKml(points: TrackPoint[], name: string): string {
   const coords = points
-    .map((p) => `${p.longitude},${p.latitude},${p.elevation ?? 0}`)
+    .map((p) => `${formatCoord(p.longitude)},${formatCoord(p.latitude)},${formatNum(p.elevation ?? 0)}`)
     .join(' ');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">

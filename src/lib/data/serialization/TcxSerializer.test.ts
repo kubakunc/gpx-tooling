@@ -28,9 +28,11 @@ describe('serializeTcx', () => {
     expect(xml).toContain('<Id>2024-01-01T10:00:00.000Z</Id>');
   });
 
-  it('falls back to the escaped name as Id when there are no timestamps', () => {
+  it('falls back to a synthetic epoch dateTime Id when there are no timestamps', () => {
+    // TCX Id is xsd:dateTime, so a filename is invalid here.
     const xml = serializeTcx([pt({ time: null })], 'a & b');
-    expect(xml).toContain('<Id>a &amp; b</Id>');
+    expect(xml).toContain('<Id>1970-01-01T00:00:00.000Z</Id>');
+    expect(xml).not.toContain('a &amp; b');
   });
 
   it('writes one Trackpoint per point', () => {

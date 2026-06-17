@@ -1,12 +1,15 @@
 import type { TrackPoint } from '../../domain/entities/TrackPoint';
+import { formatCoord, formatNum } from './format';
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function trkptXml(p: TrackPoint): string {
-  const parts: string[] = [`    <trkpt lat="${p.latitude}" lon="${p.longitude}">`];
-  if (p.elevation !== null) parts.push(`      <ele>${p.elevation}</ele>`);
+  const parts: string[] = [
+    `    <trkpt lat="${formatCoord(p.latitude)}" lon="${formatCoord(p.longitude)}">`,
+  ];
+  if (p.elevation !== null) parts.push(`      <ele>${formatNum(p.elevation)}</ele>`);
   if (p.time !== null) parts.push(`      <time>${p.time.toISOString()}</time>`);
   const { hr, cadence, power } = p.sensors;
   if (hr !== undefined || cadence !== undefined || power !== undefined) {
