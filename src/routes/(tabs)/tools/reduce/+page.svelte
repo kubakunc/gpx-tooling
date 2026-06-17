@@ -2,21 +2,24 @@
   import ToolHeader from '$lib/components/ToolHeader.svelte';
   import RouteMap from '$lib/components/RouteMap.svelte';
   import MapBadge from '$lib/components/MapBadge.svelte';
+  import Spinner from '$lib/components/Spinner.svelte';
+  import ActiveFileSelector from '$lib/components/ActiveFileSelector.svelte';
   import { toolThemes, rgba } from '$lib/toolThemes';
   import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
   import { editSession, setFileId, setEpsilon, resetEditSession } from '$lib/stores/editSession';
   import { fileService } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { simplifyRdp } from '$lib/domain/usecases/simplify';
-  import { percentToEpsilon, MAX_EPS } from '$lib/domain/usecases/reduceMapping';
-  import { formatCount, formatBytes } from '$lib/domain/usecases/format';
+  import { percentToEpsilon, simplificationLabel } from '$lib/domain/usecases/reduceMapping';
+  import { formatCount, formatBytes, exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
 
   const t = toolThemes.reduce;
 
   let busy = $state(false);
-  // Accuracy percentage (0–100); maps to epsilon via percentToEpsilon.
-  let percent = $state(73);
+  // "Detail kept" percentage (0–100); maps to epsilon via percentToEpsilon.
+  // Default to a sensible Medium.
+  let percent = $state(50);
 
   let activeFile = $derived(
     $loadedFiles.find((f) => f.id === $editSession.fileId) ?? $loadedFiles[0] ?? null
@@ -35,9 +38,7 @@
   let beforeBytes = $derived(new TextEncoder().encode(beforeXml).length);
   let afterBytes = $derived(new TextEncoder().encode(afterXml).length);
 
-  let accuracyLabel = $derived(
-    `${percent >= 66 ? 'High' : percent >= 33 ? 'Medium' : 'Low'} · ${percent}%`
-  );
+  let detailLabel = $derived(simplificationLabel(percent));
 
   async function importFile() {
     if (busy) return;
@@ -62,7 +63,8 @@
     try {
       // Keep epsilon in the shared edit session for continuity.
       setEpsilon(epsilon);
-      await fileService.exportAndShare(afterXml, 'reduced.gpx');
+      const name = exportName(activeFile.name, 'reduced');
+      await fileService.exportAndShare(afterXml, name);
       showToast('Reduced file exported', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
@@ -84,15 +86,23 @@
         </p>
         <button
           type="button"
-          class="mt-6 h-[52px] rounded-[18px] px-7 text-[15px] font-extrabold text-white"
+          class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}
           onclick={importFile}
         >
-          Import GPX file
+          {#if busy}<Spinner /> Working…{:else}Import GPX file{/if}
         </button>
       </div>
     {:else}
+      <ActiveFileSelector
+        files={$loadedFiles}
+        active={activeFile}
+        tile={t.tile}
+        accent={t.icon}
+        title={t.title}
+      />
+
       <div
         class="mx-6 mt-[14px] overflow-hidden rounded-[22px] border"
         style="border-color:#e6dff5;box-shadow:0 8px 22px {rgba(t.icon, 0.1)};"
@@ -129,16 +139,19 @@
 
       <div class="mx-6 mt-[14px] rounded-[16px] border bg-white p-4" style="border-color:#efece6;">
         <div class="mb-3 flex justify-between">
-          <div class="text-[14px] font-bold text-ink">Accuracy</div>
-          <div class="text-[13px] font-extrabold" style="color:{t.button};">{accuracyLabel}</div>
+          <div class="text-[14px] font-bold text-ink">Detail kept</div>
+          <div class="text-[13px] font-extrabold" style="color:{t.button};">{detailLabel}</div>
         </div>
         <input
           type="range" min="0" max="100" step="1" bind:value={percent}
           class="w-full" style="accent-color:{t.icon};"
         />
         <div class="mt-2 flex justify-between text-[11px] font-semibold" style="color:#a89ec0;">
-          <span>Smaller file (ε={MAX_EPS}m)</span><span>Track fidelity (ε=0m)</span>
+          <span>Smaller file</span><span>More detail</span>
         </div>
+        <p class="mt-[10px] text-[11px] leading-[1.5]" style="color:#9a8fc0;">
+          Drag toward "More detail" to keep the track shape; toward "Smaller file" to shrink it. See the live Points and Size above.
+        </p>
       </div>
     {/if}
   </div>
@@ -146,12 +159,12 @@
   {#if activeFile}
     <div class="px-6 pb-3 pt-2">
       <button
-        class="h-[56px] w-full rounded-[20px] text-[16px] font-extrabold text-white"
+        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
         disabled={busy || reduced.length < 2}
         onclick={reduceAndSave}
       >
-        Reduce &amp; save
+        {#if busy}<Spinner /> Working…{:else}Reduce &amp; save{/if}
       </button>
     </div>
   {/if}

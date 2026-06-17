@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { formatKm, formatGain, formatDuration, formatBytes, formatCount } from './format';
+import {
+  formatKm,
+  formatGain,
+  formatDuration,
+  formatBytes,
+  formatCount,
+  exportName
+} from './format';
 
 describe('format helpers', () => {
   it('formatKm', () => {
@@ -29,5 +36,21 @@ describe('format helpers', () => {
     expect(formatCount(8412)).toBe('8 412');
     expect(formatCount(240)).toBe('240');
     expect(formatCount(1000000)).toBe('1 000 000');
+  });
+
+  it('exportName strips source ext and appends suffix', () => {
+    expect(exportName('morning.gpx', 'trimmed')).toBe('morning-trimmed.gpx');
+    expect(exportName('ride.track.GPX', 'reduced')).toBe('ride.track-reduced.gpx');
+    expect(exportName('noext', 'merged')).toBe('noext-merged.gpx');
+  });
+
+  it('exportName falls back to suffix when source is empty', () => {
+    expect(exportName('', 'merged')).toBe('merged.gpx');
+    expect(exportName('   ', 'merged')).toBe('merged.gpx');
+    expect(exportName('.gpx', 'merged')).toBe('merged.gpx');
+  });
+
+  it('exportName honors a custom extension', () => {
+    expect(exportName('track.gpx', 'converted', 'kml')).toBe('track-converted.kml');
   });
 });
