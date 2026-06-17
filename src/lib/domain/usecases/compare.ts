@@ -16,6 +16,10 @@ export interface CompareResult {
   avgA: number | null;
   avgB: number | null;
   diffPercent: number | null;
+  /** Joint min value across both (shifted) series, or null when both empty. */
+  valueMin: number | null;
+  /** Joint max value across both (shifted) series, or null when both empty. */
+  valueMax: number | null;
 }
 
 /**
@@ -74,29 +78,51 @@ export function buildChartPaths(
   return { a: toPath(seriesA), b: toPath(seriesB) };
 }
 
+/** Quote a CSV field if it contains a comma, quote, or newline (RFC 4180). */
+function csvField(value: string): string {
+  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+}
+
 /**
  * Build a CSV of a comparison: a header row plus one row per sample for each
- * series (tagged A/B). Used by "Save comparison" via the file share.
+ * series (tagged A/B). B's `t` is already shifted by `shiftSeconds` (it lives
+ * in `result.seriesB`), so the export matches exactly what's plotted.
+ *
+ * The emitted fields today are a fixed metric label plus numbers, so none need
+ * escaping; `csvField` is applied anyway so the export stays correct (won't
+ * corrupt) if the labels ever change to contain commas/quotes/newlines.
  */
 export function comparisonToCsv(result: CompareResult, metric: CompareMetric): string {
-  const lines = [`series,t_seconds,${metric}`];
-  for (const s of result.seriesA) lines.push(`A,${s.t},${s.v}`);
-  for (const s of result.seriesB) lines.push(`B,${s.t},${s.v}`);
+  const lines = [['series', 't_seconds', metric].map(csvField).join(',')];
+  for (const s of result.seriesA) lines.push(['A', s.t, s.v].map((c) => csvField(String(c))).join(','));
+  for (const s of result.seriesB) lines.push(['B', s.t, s.v].map((c) => csvField(String(c))).join(','));
   return lines.join('\n');
 }
 
-function average(series: Sample[]): number | null {
-  if (series.length === 0) return null;
+/** Mean of the values whose `t` falls within `[start, end]`, or null if none. */
+function averageInWindow(series: Sample[], start: number, end: number): number | null {
   let sum = 0;
-  for (const s of series) sum += s.v;
-  return sum / series.length;
+  let n = 0;
+  for (const s of series) {
+    if (s.t >= start && s.t <= end) {
+      sum += s.v;
+      n++;
+    }
+  }
+  return n === 0 ? null : sum / n;
 }
 
 /**
  * Compare two tracks on a single sensor metric. `seriesB` has `shiftSeconds`
  * added to each sample's `t` (to align devices that started at different times).
- * Averages are over each series' values; `diffPercent` is the relative
- * difference of B vs A, or null when it cannot be computed.
+ *
+ * Averages are computed over the *overlapping time window* after the shift:
+ * `[max(minTA, minTB'), min(maxTA, maxTB')]`. This keeps the stats in sync with
+ * the chart — dragging the shift changes which samples overlap, so the averages
+ * and `diffPercent` move with the shift instead of being whole-series means.
+ * When there is no overlap (or either series is empty), the avgs/diff are null
+ * (the screen renders "—"). The full (shifted) series are still returned so the
+ * chart can plot everything.
  */
 export function compareTracks(
   a: TrackPoint[],
@@ -106,9 +132,35 @@ export function compareTracks(
 ): CompareResult {
   const seriesA = extractSeries(a, metric);
   const seriesB = extractSeries(b, metric).map((s) => ({ t: s.t + shiftSeconds, v: s.v }));
-  const avgA = average(seriesA);
-  const avgB = average(seriesB);
+
+  let avgA: number | null = null;
+  let avgB: number | null = null;
+  if (seriesA.length > 0 && seriesB.length > 0) {
+    const minTA = seriesA[0].t;
+    const maxTA = seriesA[seriesA.length - 1].t;
+    const minTB = seriesB[0].t;
+    const maxTB = seriesB[seriesB.length - 1].t;
+    const overlapStart = Math.max(minTA, minTB);
+    const overlapEnd = Math.min(maxTA, maxTB);
+    if (overlapStart <= overlapEnd) {
+      avgA = averageInWindow(seriesA, overlapStart, overlapEnd);
+      avgB = averageInWindow(seriesB, overlapStart, overlapEnd);
+    }
+  }
+
   const diffPercent =
     avgA !== null && avgB !== null && avgA !== 0 ? ((avgB - avgA) / avgA) * 100 : null;
-  return { seriesA, seriesB, avgA, avgB, diffPercent };
+
+  let valueMin: number | null = null;
+  let valueMax: number | null = null;
+  for (const s of seriesA) {
+    if (valueMin === null || s.v < valueMin) valueMin = s.v;
+    if (valueMax === null || s.v > valueMax) valueMax = s.v;
+  }
+  for (const s of seriesB) {
+    if (valueMin === null || s.v < valueMin) valueMin = s.v;
+    if (valueMax === null || s.v > valueMax) valueMax = s.v;
+  }
+
+  return { seriesA, seriesB, avgA, avgB, diffPercent, valueMin, valueMax };
 }

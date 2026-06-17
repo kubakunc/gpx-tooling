@@ -98,6 +98,67 @@ describe('compareTracks', () => {
     expect(r.diffPercent).toBeCloseTo(10);
   });
 
+  it('averages only over the overlapping time window after the shift', () => {
+    // A spans t=0..30; B spans t=0..30. No shift -> full overlap [0,30].
+    const a = [tp(0, { power: 100 }), tp(30, { power: 300 })]; // both in window
+    const b = [tp(0, { power: 200 }), tp(30, { power: 400 })];
+    const r = compareTracks(a, b, 'power', 0);
+    expect(r.avgA).toBe(200); // (100+300)/2
+    expect(r.avgB).toBe(300); // (200+400)/2
+  });
+
+  it('changing shiftSeconds changes avgB and diffPercent (chart vs stats sync)', () => {
+    // A: samples at t=0,10,20 (values 100,100,100). B: t=0,10,20 (values 0,100,200).
+    const a = [tp(0, { power: 100 }), tp(10, { power: 100 }), tp(20, { power: 100 })];
+    const b = [tp(0, { power: 0 }), tp(10, { power: 100 }), tp(20, { power: 200 })];
+
+    // Shift +10: B becomes t=10,20,30. Overlap with A [0,20] is [10,20].
+    //   A in [10,20] -> {100,100} avg 100. B(shifted) in [10,20] -> {0,100} avg 50.
+    const r1 = compareTracks(a, b, 'power', 10);
+    expect(r1.avgA).toBe(100);
+    expect(r1.avgB).toBe(50);
+    expect(r1.diffPercent).toBeCloseTo(-50);
+
+    // Shift -10: B becomes t=-10,0,10. Overlap with A [0,20] is [0,10].
+    //   A in [0,10] -> {100,100} avg 100. B(shifted) in [0,10] -> {100,200} avg 150.
+    const r2 = compareTracks(a, b, 'power', -10);
+    expect(r2.avgA).toBe(100);
+    expect(r2.avgB).toBe(150);
+    expect(r2.diffPercent).toBeCloseTo(50);
+
+    // Two shifts produce different numbers.
+    expect(r1.avgB).not.toBe(r2.avgB);
+    expect(r1.diffPercent).not.toBe(r2.diffPercent);
+  });
+
+  it('returns null avgs/diff when the shift removes all overlap', () => {
+    const a = [tp(0, { power: 100 }), tp(10, { power: 100 })]; // [0,10]
+    const b = [tp(0, { power: 200 }), tp(10, { power: 200 })]; // [0,10] -> shifted +100 => [100,110]
+    const r = compareTracks(a, b, 'power', 100);
+    expect(r.avgA).toBeNull();
+    expect(r.avgB).toBeNull();
+    expect(r.diffPercent).toBeNull();
+    // Series are still returned for the chart (B shifted).
+    expect(r.seriesB).toEqual([
+      { t: 100, v: 200 },
+      { t: 110, v: 200 }
+    ]);
+  });
+
+  it('exposes the joint value min/max across both series for the Y-axis', () => {
+    const a = [tp(0, { power: 100 }), tp(10, { power: 250 })];
+    const b = [tp(0, { power: 50 }), tp(10, { power: 300 })];
+    const r = compareTracks(a, b, 'power', 0);
+    expect(r.valueMin).toBe(50);
+    expect(r.valueMax).toBe(300);
+  });
+
+  it('reports null value min/max when both series are empty', () => {
+    const r = compareTracks([], [], 'power', 0);
+    expect(r.valueMin).toBeNull();
+    expect(r.valueMax).toBeNull();
+  });
+
   it('shifts seriesB t values by shiftSeconds', () => {
     const a = [tp(0, { power: 100 })];
     const b = [tp(0, { power: 100 }), tp(5, { power: 120 })];
@@ -115,25 +176,25 @@ describe('compareTracks', () => {
     expect(r.seriesB).toEqual([{ t: -2, v: 100 }]);
   });
 
-  it('returns null avg/diff when series A is empty', () => {
+  it('returns null avg/diff when series A is empty (no overlap window)', () => {
     const b = [tp(0, { power: 100 })];
     const r = compareTracks([], b, 'power', 0);
     expect(r.avgA).toBeNull();
-    expect(r.avgB).toBe(100);
+    expect(r.avgB).toBeNull();
     expect(r.diffPercent).toBeNull();
   });
 
-  it('returns null avgB when series B is empty', () => {
+  it('returns null avgs when series B is empty (no overlap window)', () => {
     const a = [tp(0, { power: 100 })];
     const r = compareTracks(a, [], 'power', 0);
-    expect(r.avgA).toBe(100);
+    expect(r.avgA).toBeNull();
     expect(r.avgB).toBeNull();
     expect(r.diffPercent).toBeNull();
   });
 
   it('returns null diff when avgA is 0', () => {
-    const a = [tp(0, { cadence: 0 })];
-    const b = [tp(0, { cadence: 50 })];
+    const a = [tp(0, { cadence: 0 }), tp(10, { cadence: 0 })];
+    const b = [tp(0, { cadence: 50 }), tp(10, { cadence: 50 })];
     const r = compareTracks(a, b, 'cadence', 0);
     expect(r.avgA).toBe(0);
     expect(r.diffPercent).toBeNull();
