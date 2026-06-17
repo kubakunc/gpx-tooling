@@ -2,16 +2,25 @@
   import ToolHeader from '$lib/components/ToolHeader.svelte';
   import SegmentedControl from '$lib/components/SegmentedControl.svelte';
   import { toolThemes, rgba } from '$lib/toolThemes';
+  import { showToast } from '$lib/stores/toast';
 
   const t = toolThemes.compare;
 
   const metrics = ['Power', 'Heart rate', 'Cadence'];
   const selectedIndex = metrics.indexOf('Power');
+
+  function notYet() {
+    showToast("This tool isn't available yet", 'info');
+  }
 </script>
 
 <div class="flex h-full flex-col">
   <div class="flex-1 overflow-y-auto">
     <ToolHeader title="Compare tracks" />
+
+    <div class="px-6 pt-1 text-[11px] font-semibold text-ink-faint">
+      Preview — not functional yet
+    </div>
 
     <div class="mx-6 mt-[6px] flex gap-[10px]">
       <div
@@ -118,6 +127,8 @@
 
   <div class="flex gap-3 px-6 pb-3 pt-2">
     <button
+      type="button"
+      onclick={notYet}
       class="h-[56px] flex-1 rounded-[20px] text-[16px] font-extrabold text-white"
       style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
     >
