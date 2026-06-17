@@ -107,12 +107,25 @@ describe('GpxWorkerClient with a worker', () => {
       },
       terminate() {}
     };
+    const terminate = vi.spyOn(fake, 'terminate');
     const client = new GpxWorkerClient({ createWorker: () => fake });
     const promise = client.runSimplify([tp(0, 0), tp(0, 1)], 10);
-    // Trigger the worker-level error path.
-    fake.onerror?.(new Error('crash'));
-    await expect(promise).rejects.toThrow(/crash/i);
+    // Trigger the worker-level error path with an ErrorEvent-like message.
+    fake.onerror?.({ message: 'boom in worker' });
+    await expect(promise).rejects.toThrow(/boom in worker/i);
     expect(captured).not.toBeNull();
+    // The worker must be terminated before being dropped.
+    expect(terminate).toHaveBeenCalled();
+  });
+
+  it('falls back to sync for new requests after a worker crash', async () => {
+    const fake = makeFakeWorker();
+    const client = new GpxWorkerClient({ createWorker: () => fake });
+    // Crash with no message — generic error string is used.
+    fake.onerror?.({});
+    // A fresh request now runs synchronously (no worker), still resolving.
+    const r = await client.runSimplify([tp(0, 0), tp(0, 0.5), tp(0, 1)], 10);
+    expect(r).toHaveLength(2);
   });
 
   it('ignores responses for unknown ids', () => {

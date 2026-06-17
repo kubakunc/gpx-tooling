@@ -38,6 +38,15 @@ interface Pending {
   resolve: (res: WorkerResponse) => void;
 }
 
+/** Best-effort extraction of a human-readable message from a worker error event. */
+function errorEventMessage(event: unknown): string | null {
+  if (typeof event === 'object' && event !== null && 'message' in event) {
+    const m = (event as { message: unknown }).message;
+    if (typeof m === 'string' && m.length > 0) return m;
+  }
+  return null;
+}
+
 /** A request payload without the correlation id (the client assigns it). */
 type WorkerRequestBody =
   | Omit<Extract<WorkerRequest, { type: 'parse' }>, 'id'>
@@ -72,7 +81,7 @@ export class GpxWorkerClient {
     }
     if (this.worker) {
       this.worker.onmessage = (event) => this.onMessage(event.data);
-      this.worker.onerror = () => this.onError();
+      this.worker.onerror = (event) => this.onError(event);
     }
     return this.worker;
   }
@@ -85,12 +94,19 @@ export class GpxWorkerClient {
   }
 
   /** A worker-level error fails every in-flight request so callers never hang. */
-  private onError(): void {
-    for (const [, p] of this.pending) {
-      p.resolve({ id: -1, ok: false, error: 'Worker crashed' });
+  private onError(event?: unknown): void {
+    // Terminate the crashed worker before dropping our reference so it can't
+    // keep running or leak. Subsequent calls fall back to synchronous handling
+    // (ensureWorker won't re-create it because `initialized` stays true).
+    this.worker?.terminate();
+    const detail = errorEventMessage(event);
+    const error = detail ? `Worker crashed: ${detail}` : 'Worker crashed';
+    // Resolve each pending request with its own real id (not a -1 sentinel) so
+    // callers/logs can correlate the failure to the originating request.
+    for (const [id, p] of this.pending) {
+      p.resolve({ id, ok: false, error });
     }
     this.pending.clear();
-    // Drop the worker; subsequent calls fall back to synchronous handling.
     this.worker = null;
   }
 
