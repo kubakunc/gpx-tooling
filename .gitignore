@@ -1,0 +1,7 @@
+node_modules/
+build/
+.svelte-kit/
+android/
+dist/
+*.log
+.DS_Store
