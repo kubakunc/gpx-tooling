@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;}
+</style>
+</helmet>
+<div style="width:max-content;min-width:100%;min-height:100vh;box-sizing:border-box;padding:56px;background:#e7e5df;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="margin-bottom:38px;max-width:780px;">
+    <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#ea580c;margin-bottom:8px;">Kierunek 10 · Soft Sticker · z menu</div>
+    <div style="font-size:32px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Hub z 6 narzędziami + ekrany detalu</div>
+    <div style="font-size:15px;color:#5a5f66;margin-top:10px;line-height:1.55;max-width:680px;">Menu to ekran startowy: każda funkcja ma swój pastelowy kafelek i kolor, który ciągnie się dalej w danym narzędziu. Bottom bar zostaje prosty (Menu · Pliki · Ustawienia), a narzędzia żyją w hubie (siatka) — łatwo dołożyć kolejne. Mapa trasy jest w Scal, Przytnij i Redukcji.</div>
+  </div>
+
+  <div style="display:flex;gap:46px;align-items:flex-start;">
+
+    <!-- ============ A · HUB / MENU ============ -->
+    <div style="flex:none;width:390px;">
+      <div style="font-size:13px;font-weight:700;color:#1c1917;margin-bottom:3px;">A · Menu (ekran startowy)</div>
+      <div style="font-size:12px;color:#6b7077;margin-bottom:14px;">6 narzędzi w siatce + powiązana apka</div>
+      <div style="width:390px;height:844px;background:#fcfbf9;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 11px #eceef2,0 28px 55px rgba(30,40,60,.22);font-family:'Plus Jakarta Sans',sans-serif;">
+        <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 7px;color:#1c1917;font-size:14px;font-weight:700;"><span>9:41</span><span style="letter-spacing:1px;color:#8a9099;font-size:13px;">▮▮▮ ◔ ⬤</span></div>
+        <div style="padding:18px 24px 8px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">GPX Suite</div>
+            <div style="font-size:27px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Narzędzia</div>
+          </div>
+          <div style="width:46px;height:46px;border-radius:14px;background:#1c1917;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:800;">GP</div>
+        </div>
+
+        <div style="padding:6px 24px 0;display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+          <div style="background:#ecfdf5;border-radius:18px;padding:14px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#10b981;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;margin-bottom:10px;">⤬</div>
+            <div style="font-size:15px;font-weight:800;color:#064e3b;">Scal pliki</div>
+            <div style="font-size:11px;color:#5b8c7d;margin-top:2px;">Połącz w jeden ślad</div>
+          </div>
+          <div style="background:#eff6ff;border-radius:18px;padding:14px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#3b82f6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;margin-bottom:10px;">✂</div>
+            <div style="font-size:15px;font-weight:800;color:#1e3a8a;">Przytnij ślad</div>
+            <div style="font-size:11px;color:#6b8fc7;margin-top:2px;">Utnij zakres na mapie</div>
+          </div>
+          <div style="background:#fdf2f8;border-radius:18px;padding:14px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#ec4899;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;margin-bottom:10px;">⇄</div>
+            <div style="font-size:15px;font-weight:800;color:#831843;">Konwertuj</div>
+            <div style="font-size:11px;color:#b06a8c;margin-top:2px;">GPX · FIT · TCX · KML</div>
+          </div>
+          <div style="background:#fef3c7;border-radius:18px;padding:14px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#f59e0b;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;margin-bottom:10px;">⛰</div>
+            <div style="font-size:15px;font-weight:800;color:#92400e;">Korekta wys.</div>
+            <div style="font-size:11px;color:#b45309;margin-top:2px;">Popraw profil i przewyższenie</div>
+          </div>
+          <div style="background:#f3e8ff;border-radius:18px;padding:14px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#8b5cf6;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;margin-bottom:10px;">⊚</div>
+            <div style="font-size:15px;font-weight:800;color:#4c1d95;">Redukcja</div>
+            <div style="font-size:11px;color:#8a6fc0;margin-top:2px;">Zmniejsz rozmiar pliku</div>
+          </div>
+          <div style="background:#eef2ff;border-radius:18px;padding:14px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:#6366f1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;margin-bottom:10px;">≈</div>
+            <div style="font-size:15px;font-weight:800;color:#3730a3;">Porównaj ślady</div>
+            <div style="font-size:11px;color:#7c83c4;margin-top:2px;">Zestaw 2 pliki na wykresie</div>
+          </div>
+        </div>
+        <div style="padding:14px 24px 0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:11px;">
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Powiązana aplikacja</div>
+            <div style="flex:1;height:1px;background:#ece8e1;"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;background:#ecfeff;border:1px solid #cdf0f5;border-radius:18px;padding:14px;">
+            <div style="width:44px;height:44px;border-radius:13px;background:#06b6d4;display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;">↧</div>
+            <div style="flex:1;"><div style="font-size:15px;font-weight:800;color:#155e75;">Eksport z Strava i Komoot</div><div style="font-size:11px;color:#5b9aa8;">Pobierz ślady GPX z Twoich kont · osobna apka</div></div>
+            <div style="width:30px;height:30px;border-radius:9px;background:#cdf0f5;display:flex;align-items:center;justify-content:center;color:#0e7490;font-size:15px;">↗</div>
+          </div>
+        </div>
+
+        <div style="position:absolute;left:0;right:0;bottom:50px;height:66px;background:#fcfbf9;border-top:1px solid #efece6;display:flex;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#1c1917;"><div style="font-size:18px;">▦</div><div style="font-size:10px;font-weight:800;">Menu</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">🗂</div><div style="font-size:10px;font-weight:600;">Pliki</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">⚙</div><div style="font-size:10px;font-weight:600;">Ustawienia</div></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:50px;background:#f4f1eb;border-top:1px solid #efece6;display:flex;align-items:center;justify-content:center;color:#b3aea4;font-size:11px;letter-spacing:.1em;">AD · Adaptive Banner</div>
+      </div>
+    </div>
+
+    <!-- ============ B · SCAL ============ -->
+    <div style="flex:none;width:390px;">
+      <div style="font-size:13px;font-weight:700;color:#1c1917;margin-bottom:3px;">B · Scal pliki (detal)</div>
+      <div style="font-size:12px;color:#6b7077;margin-bottom:14px;">Kolor emerald z kafelka ciągnie się dalej</div>
+      <div style="width:390px;height:844px;background:#fcfbf9;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 11px #eceef2,0 28px 55px rgba(30,40,60,.22);font-family:'Plus Jakarta Sans',sans-serif;">
+        <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 7px;color:#1c1917;font-size:14px;font-weight:700;"><span>9:41</span><span style="letter-spacing:1px;color:#8a9099;font-size:13px;">▮▮▮ ◔ ⬤</span></div>
+        <div style="padding:14px 24px 6px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#f1efe9;display:flex;align-items:center;justify-content:center;color:#1c1917;font-size:18px;">‹</div>
+          <div style="flex:1;"><div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Narzędzia /</div><div style="font-size:22px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Scal pliki</div></div>
+        </div>
+        <div style="margin:12px 24px 0;position:relative;height:158px;border-radius:20px;overflow:hidden;background:#e8eee9;border:1px solid #dbe7df;">
+          <div id="map-scal" style="position:absolute;inset:0;"></div>
+          <div style="position:absolute;top:12px;left:12px;z-index:500;pointer-events:none;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 11px;font-size:11px;font-weight:800;color:#064e3b;box-shadow:0 2px 8px rgba(0,0,0,.14);">Trasa po scaleniu</div>
+          <div style="position:absolute;top:12px;right:12px;z-index:500;pointer-events:none;display:flex;gap:12px;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 11px;box-shadow:0 2px 8px rgba(0,0,0,.14);">
+            <div><span style="font-size:14px;font-weight:800;color:#064e3b;">49.2</span><span style="font-size:10px;color:#5b8c7d;font-weight:700;"> km</span></div>
+            <div><span style="font-size:14px;font-weight:800;color:#064e3b;">+1057</span><span style="font-size:10px;color:#5b8c7d;font-weight:700;"> m</span></div>
+          </div>
+        </div>
+        <div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#a8a29e;font-weight:700;">3 pliki · przeciągnij</div>
+          <div style="font-size:12px;font-weight:800;color:#059669;">＋ Dodaj</div>
+        </div>
+        <div style="padding:10px 24px 0;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #eef0ec;border-radius:18px;padding:13px;box-shadow:0 5px 14px rgba(5,150,105,.05);">
+            <div style="width:36px;height:36px;border-radius:11px;background:#34d399;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;">1</div>
+            <div style="flex:1;"><div style="font-size:15px;font-weight:700;color:#1c1917;">ride_morning.gpx</div><div style="font-size:12px;color:#8a9099;">24.3 km · +312 m · 07:14</div></div>
+            <div style="color:#c4c9d0;font-size:18px;">⠿</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #eef0ec;border-radius:18px;padding:13px;box-shadow:0 5px 14px rgba(5,150,105,.05);">
+            <div style="width:36px;height:36px;border-radius:11px;background:#10b981;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;">2</div>
+            <div style="flex:1;"><div style="font-size:15px;font-weight:700;color:#1c1917;">ride_afternoon.fit</div><div style="font-size:12px;color:#8a9099;">18.7 km · +205 m · 14:02</div></div>
+            <div style="color:#c4c9d0;font-size:18px;">⠿</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #eef0ec;border-radius:18px;padding:13px;box-shadow:0 5px 14px rgba(5,150,105,.05);">
+            <div style="width:36px;height:36px;border-radius:11px;background:#059669;display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:800;">3</div>
+            <div style="flex:1;"><div style="font-size:15px;font-weight:700;color:#1c1917;">climb_segment.gpx</div><div style="font-size:12px;color:#8a9099;">6.2 km · +540 m · 16:38</div></div>
+            <div style="color:#c4c9d0;font-size:18px;">⠿</div>
+          </div>
+        </div>
+        <div style="position:absolute;left:24px;right:24px;bottom:150px;">
+          <button style="width:100%;height:56px;border:none;border-radius:20px;background:#059669;color:#fff;font-family:inherit;font-size:16px;font-weight:800;box-shadow:0 12px 26px rgba(5,150,105,.35);">Scal i eksportuj</button>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:50px;height:66px;background:#fcfbf9;border-top:1px solid #efece6;display:flex;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#1c1917;"><div style="font-size:18px;">▦</div><div style="font-size:10px;font-weight:800;">Menu</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">🗂</div><div style="font-size:10px;font-weight:600;">Pliki</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">⚙</div><div style="font-size:10px;font-weight:600;">Ustawienia</div></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:50px;background:#f4f1eb;border-top:1px solid #efece6;display:flex;align-items:center;justify-content:center;color:#b3aea4;font-size:11px;letter-spacing:.1em;">AD · Adaptive Banner</div>
+      </div>
+    </div>
+
+    <!-- ============ C · PRZYTNIJ ============ -->
+    <div style="flex:none;width:390px;">
+      <div style="font-size:13px;font-weight:700;color:#1c1917;margin-bottom:3px;">C · Przytnij ślad</div>
+      <div style="font-size:12px;color:#6b7077;margin-bottom:14px;">Zaznacz zakres na profilu, dwa uchwyty</div>
+      <div style="width:390px;height:844px;background:#fcfbf9;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 11px #eceef2,0 28px 55px rgba(30,40,60,.22);font-family:'Plus Jakarta Sans',sans-serif;">
+        <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 7px;color:#1c1917;font-size:14px;font-weight:700;"><span>9:41</span><span style="letter-spacing:1px;color:#8a9099;font-size:13px;">▮▮▮ ◔ ⬤</span></div>
+        <div style="padding:14px 24px 6px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#f1efe9;display:flex;align-items:center;justify-content:center;color:#1c1917;font-size:18px;">‹</div>
+          <div style="flex:1;"><div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Narzędzia /</div><div style="font-size:22px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Przytnij ślad</div></div>
+        </div>
+        <div style="margin:6px 24px 0;display:inline-flex;align-items:center;gap:9px;background:#eff6ff;border-radius:12px;padding:9px 14px;">
+          <div style="width:8px;height:20px;border-radius:4px;background:#3b82f6;"></div>
+          <div style="font-size:14px;font-weight:700;color:#1e3a8a;">ride_morning.gpx</div>
+        </div>
+        <div style="margin:12px 24px 0;position:relative;height:150px;border-radius:20px;overflow:hidden;background:#e8eef4;border:1px solid #dbe5f0;">
+          <div id="map-trim" style="position:absolute;inset:0;"></div>
+          <div style="position:absolute;top:12px;left:12px;z-index:500;pointer-events:none;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 11px;font-size:11px;font-weight:800;color:#1e3a8a;box-shadow:0 2px 8px rgba(0,0,0,.14);">Zachowany odcinek</div>
+          <div style="position:absolute;bottom:10px;left:12px;z-index:500;pointer-events:none;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 11px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.14);">
+            <span style="display:flex;align-items:center;gap:5px;color:#1e3a8a;"><span style="width:12px;height:3px;border-radius:2px;background:#1d4ed8;display:inline-block;"></span>zostaje</span>
+            <span style="display:flex;align-items:center;gap:5px;color:#9aa6b6;"><span style="width:12px;border-top:3px dotted #93a3ba;display:inline-block;"></span>wycięte</span>
+          </div>
+        </div>
+        <div style="margin:12px 24px 0;background:#fff;border:1px solid #e8eef7;border-radius:20px;padding:14px 14px 12px;box-shadow:0 8px 22px rgba(59,130,246,.08);">
+          <div style="position:relative;height:96px;">
+            <svg viewBox="0 0 340 96" width="100%" height="96" preserveAspectRatio="none" style="display:block;">
+              <defs><linearGradient id="trimg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b82f6" stop-opacity="0.35"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>
+              <path d="M0,74 L20,66 L40,69 L60,46 L80,53 L100,34 L120,42 L140,27 L160,37 L180,24 L200,32 L220,19 L240,30 L260,18 L280,27 L300,32 L320,45 L340,40 L340,96 L0,96 Z" fill="#eef2f7"/>
+              <rect x="78" y="0" width="186" height="96" fill="url(#trimg)"/>
+              <path d="M0,74 L20,66 L40,69 L60,46 L80,53 L100,34 L120,42 L140,27 L160,37 L180,24 L200,32 L220,19 L240,30 L260,18 L280,27 L300,32 L320,45 L340,40" fill="none" stroke="#c2d3ea" stroke-width="2"/>
+              <path d="M80,53 L100,34 L120,42 L140,27 L160,37 L180,24 L200,32 L220,19 L240,30 L260,18" fill="none" stroke="#1d4ed8" stroke-width="3"/>
+            </svg>
+            <div style="position:absolute;top:0;bottom:0;left:23%;width:3px;background:#1d4ed8;border-radius:2px;"></div>
+            <div style="position:absolute;top:50%;left:23%;transform:translate(-50%,-50%);width:16px;height:28px;border-radius:6px;background:#1d4ed8;box-shadow:0 3px 8px rgba(29,78,216,.4);"></div>
+            <div style="position:absolute;top:0;bottom:0;left:77%;width:3px;background:#1d4ed8;border-radius:2px;"></div>
+            <div style="position:absolute;top:50%;left:77%;transform:translate(-50%,-50%);width:16px;height:28px;border-radius:6px;background:#1d4ed8;box-shadow:0 3px 8px rgba(29,78,216,.4);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+            <div style="background:#eff6ff;border-radius:11px;padding:7px 11px;"><div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#6b8fc7;font-weight:700;">Początek</div><div style="font-size:15px;font-weight:800;color:#1e3a8a;">00:12:30</div></div>
+            <div style="text-align:center;"><div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#6b8fc7;font-weight:700;">Zostaje</div><div style="font-size:15px;font-weight:800;color:#1d4ed8;">19.8 km · 1:35:40</div></div>
+            <div style="background:#eff6ff;border-radius:11px;padding:7px 11px;text-align:right;"><div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#6b8fc7;font-weight:700;">Koniec</div><div style="font-size:15px;font-weight:800;color:#1e3a8a;">01:48:10</div></div>
+          </div>
+        </div>
+        <div style="position:absolute;left:24px;right:24px;bottom:150px;display:flex;gap:12px;">
+          <button style="flex:1;height:56px;border:none;border-radius:20px;background:#1d4ed8;color:#fff;font-family:inherit;font-size:16px;font-weight:800;box-shadow:0 12px 26px rgba(29,78,216,.32);">Przytnij i zapisz</button>
+          <button style="width:56px;height:56px;border:none;border-radius:20px;background:#eff6ff;color:#1d4ed8;font-size:18px;">↺</button>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:50px;height:66px;background:#fcfbf9;border-top:1px solid #efece6;display:flex;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#1c1917;"><div style="font-size:18px;">▦</div><div style="font-size:10px;font-weight:800;">Menu</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">🗂</div><div style="font-size:10px;font-weight:600;">Pliki</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">⚙</div><div style="font-size:10px;font-weight:600;">Ustawienia</div></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:50px;background:#f4f1eb;border-top:1px solid #efece6;display:flex;align-items:center;justify-content:center;color:#b3aea4;font-size:11px;letter-spacing:.1em;">AD · Adaptive Banner</div>
+      </div>
+    </div>
+
+    <!-- ============ D · KONWERTUJ ============ -->
+    <div style="flex:none;width:390px;">
+      <div style="font-size:13px;font-weight:700;color:#1c1917;margin-bottom:3px;">D · Konwertuj format</div>
+      <div style="font-size:12px;color:#6b7077;margin-bottom:14px;">Wybór formatu docelowego + opcje</div>
+      <div style="width:390px;height:844px;background:#fcfbf9;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 11px #eceef2,0 28px 55px rgba(30,40,60,.22);font-family:'Plus Jakarta Sans',sans-serif;">
+        <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 7px;color:#1c1917;font-size:14px;font-weight:700;"><span>9:41</span><span style="letter-spacing:1px;color:#8a9099;font-size:13px;">▮▮▮ ◔ ⬤</span></div>
+        <div style="padding:14px 24px 6px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#f1efe9;display:flex;align-items:center;justify-content:center;color:#1c1917;font-size:18px;">‹</div>
+          <div style="flex:1;"><div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Narzędzia /</div><div style="font-size:22px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Konwertuj format</div></div>
+        </div>
+        <div style="margin:8px 24px 0;display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;border-radius:18px;background:#fff;border:1px solid #f3dceb;padding:16px;text-align:center;"><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#b06a8c;font-weight:700;">Z formatu</div><div style="font-size:24px;font-weight:800;color:#831843;letter-spacing:.02em;margin-top:2px;">GPX</div></div>
+          <div style="color:#ec4899;font-size:24px;font-weight:800;">→</div>
+          <div style="flex:1;border-radius:18px;background:#ec4899;padding:16px;text-align:center;box-shadow:0 10px 22px rgba(236,72,153,.3);"><div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#ffd6e8;font-weight:700;">Na format</div><div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:.02em;margin-top:2px;">TCX</div></div>
+        </div>
+        <div style="padding:18px 24px 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Format docelowy</div>
+        <div style="padding:10px 24px 0;display:flex;gap:10px;">
+          <div style="flex:1;text-align:center;border-radius:14px;background:#fff;border:1px solid #efece6;padding:13px 0;font-size:14px;font-weight:700;color:#6b7077;">GPX</div>
+          <div style="flex:1;text-align:center;border-radius:14px;background:#fff;border:1px solid #efece6;padding:13px 0;font-size:14px;font-weight:700;color:#6b7077;">FIT</div>
+          <div style="flex:1;text-align:center;border-radius:14px;background:#fdf2f8;border:2px solid #ec4899;padding:12px 0;font-size:14px;font-weight:800;color:#be185d;">TCX</div>
+          <div style="flex:1;text-align:center;border-radius:14px;background:#fff;border:1px solid #efece6;padding:13px 0;font-size:14px;font-weight:700;color:#6b7077;">KML</div>
+        </div>
+        <div style="padding:20px 24px 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Zachowaj dane</div>
+        <div style="padding:10px 24px 0;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #efece6;border-radius:16px;padding:13px 15px;"><div style="flex:1;font-size:14px;font-weight:700;color:#1c1917;">Dane z czujników <span style="color:#9aa0a8;font-weight:600;">HR · CAD · PWR</span></div><div style="width:44px;height:26px;border-radius:13px;background:#ec4899;position:relative;"><div style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;"></div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #efece6;border-radius:16px;padding:13px 15px;"><div style="flex:1;font-size:14px;font-weight:700;color:#1c1917;">Znaczniki czasu</div><div style="width:44px;height:26px;border-radius:13px;background:#ec4899;position:relative;"><div style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;"></div></div></div>
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #efece6;border-radius:16px;padding:13px 15px;"><div style="flex:1;font-size:14px;font-weight:700;color:#1c1917;">Punkty trasy <span style="color:#9aa0a8;font-weight:600;">(waypoints)</span></div><div style="width:44px;height:26px;border-radius:13px;background:#e7e2dc;position:relative;"><div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;"></div></div></div>
+        </div>
+        <div style="position:absolute;left:24px;right:24px;bottom:150px;">
+          <button style="width:100%;height:56px;border:none;border-radius:20px;background:#be185d;color:#fff;font-family:inherit;font-size:16px;font-weight:800;box-shadow:0 12px 26px rgba(190,24,93,.32);">Konwertuj → ride_morning.tcx</button>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:50px;height:66px;background:#fcfbf9;border-top:1px solid #efece6;display:flex;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#1c1917;"><div style="font-size:18px;">▦</div><div style="font-size:10px;font-weight:800;">Menu</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">🗂</div><div style="font-size:10px;font-weight:600;">Pliki</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">⚙</div><div style="font-size:10px;font-weight:600;">Ustawienia</div></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:50px;background:#f4f1eb;border-top:1px solid #efece6;display:flex;align-items:center;justify-content:center;color:#b3aea4;font-size:11px;letter-spacing:.1em;">AD · Adaptive Banner</div>
+      </div>
+    </div>
+
+    <!-- ============ E · KOREKTA WYSOKOŚCI ============ -->
+    <div style="flex:none;width:390px;">
+      <div style="font-size:13px;font-weight:700;color:#1c1917;margin-bottom:3px;">E · Korekta wysokości</div>
+      <div style="font-size:12px;color:#6b7077;margin-bottom:14px;">Profil przed/po + źródło danych</div>
+      <div style="width:390px;height:844px;background:#fcfbf9;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 11px #eceef2,0 28px 55px rgba(30,40,60,.22);font-family:'Plus Jakarta Sans',sans-serif;">
+        <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 7px;color:#1c1917;font-size:14px;font-weight:700;"><span>9:41</span><span style="letter-spacing:1px;color:#8a9099;font-size:13px;">▮▮▮ ◔ ⬤</span></div>
+        <div style="padding:14px 24px 6px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#f1efe9;display:flex;align-items:center;justify-content:center;color:#1c1917;font-size:18px;">‹</div>
+          <div style="flex:1;"><div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Narzędzia /</div><div style="font-size:22px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Korekta wysokości</div></div>
+        </div>
+        <div style="margin:14px 24px;background:#fff;border:1px solid #f3ead2;border-radius:22px;padding:16px 14px 12px;box-shadow:0 8px 22px rgba(245,158,11,.1);">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:8px;font-size:11px;font-weight:700;">
+            <div style="display:flex;align-items:center;gap:6px;color:#a8a29e;"><span style="width:14px;height:3px;border-radius:2px;background:#d6c4a0;display:inline-block;"></span>Surowy GPS</div>
+            <div style="display:flex;align-items:center;gap:6px;color:#b45309;"><span style="width:14px;height:3px;border-radius:2px;background:#f59e0b;display:inline-block;"></span>Po korekcie</div>
+          </div>
+          <svg viewBox="0 0 340 104" width="100%" height="104" preserveAspectRatio="none" style="display:block;">
+            <defs><linearGradient id="elevg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f59e0b" stop-opacity="0.3"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0,80 L20,60 L40,72 L60,40 L80,66 L100,30 L120,58 L140,24 L160,52 L180,20 L200,44 L220,16 L240,40 L260,22 L280,46 L300,34 L320,58 L340,44 L340,104 L0,104 Z" fill="url(#elevg)"/>
+            <path d="M0,82 L20,56 L40,78 L60,36 L80,72 L100,26 L120,64 L140,20 L160,58 L180,16 L200,50 L220,12 L240,46 L260,18 L280,52 L300,30 L320,64 L340,40" fill="none" stroke="#d6c4a0" stroke-width="2" stroke-dasharray="3 3"/>
+            <path d="M0,80 L20,60 L40,72 L60,40 L80,66 L100,30 L120,58 L140,24 L160,52 L180,20 L200,44 L220,16 L240,40 L260,22 L280,46 L300,34 L320,58 L340,44" fill="none" stroke="#f59e0b" stroke-width="2.6"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;">
+            <div><div style="font-size:11px;color:#b08b4a;">Przewyższenie przed</div><div style="font-size:20px;font-weight:800;color:#a8a29e;text-decoration:line-through;">1057 m</div></div>
+            <div style="text-align:right;"><div style="font-size:11px;color:#b45309;">Po korekcie</div><div style="font-size:20px;font-weight:800;color:#92400e;">1042 m</div></div>
+          </div>
+        </div>
+        <div style="padding:0 24px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Źródło wysokości</div>
+        <div style="padding:10px 24px 0;display:flex;gap:8px;">
+          <div style="flex:1;text-align:center;border-radius:13px;background:#fff;border:1px solid #efece6;padding:11px 0;font-size:13px;font-weight:700;color:#6b7077;">GPS</div>
+          <div style="flex:1;text-align:center;border-radius:13px;background:#fef3c7;border:2px solid #f59e0b;padding:10px 0;font-size:13px;font-weight:800;color:#92400e;">SRTM</div>
+          <div style="flex:1;text-align:center;border-radius:13px;background:#fff;border:1px solid #efece6;padding:11px 0;font-size:13px;font-weight:700;color:#6b7077;">Mapbox</div>
+        </div>
+        <div style="margin:18px 24px 0;background:#fff;border:1px solid #efece6;border-radius:16px;padding:14px 16px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px;"><div style="font-size:14px;font-weight:700;color:#1c1917;">Wygładzanie</div><div style="font-size:13px;font-weight:800;color:#b45309;">Średnie</div></div>
+          <div style="height:6px;border-radius:3px;background:#f1ead9;position:relative;"><div style="position:absolute;left:0;top:0;bottom:0;width:55%;background:#f59e0b;border-radius:3px;"></div><div style="position:absolute;left:55%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#f59e0b;box-shadow:0 2px 6px rgba(245,158,11,.5);"></div></div>
+        </div>
+        <div style="position:absolute;left:24px;right:24px;bottom:150px;">
+          <button style="width:100%;height:56px;border:none;border-radius:20px;background:#b45309;color:#fff;font-family:inherit;font-size:16px;font-weight:800;box-shadow:0 12px 26px rgba(180,83,9,.3);">Zastosuj korektę</button>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:50px;height:66px;background:#fcfbf9;border-top:1px solid #efece6;display:flex;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#1c1917;"><div style="font-size:18px;">▦</div><div style="font-size:10px;font-weight:800;">Menu</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">🗂</div><div style="font-size:10px;font-weight:600;">Pliki</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">⚙</div><div style="font-size:10px;font-weight:600;">Ustawienia</div></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:50px;background:#f4f1eb;border-top:1px solid #efece6;display:flex;align-items:center;justify-content:center;color:#b3aea4;font-size:11px;letter-spacing:.1em;">AD · Adaptive Banner</div>
+      </div>
+    </div>
+
+    <!-- ============ F · REDUKCJA PUNKTÓW ============ -->
+    <div style="flex:none;width:390px;">
+      <div style="font-size:13px;font-weight:700;color:#1c1917;margin-bottom:3px;">F · Redukcja punktów</div>
+      <div style="font-size:12px;color:#6b7077;margin-bottom:14px;">Suwak dokładności + przed/po</div>
+      <div style="width:390px;height:844px;background:#fcfbf9;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 11px #eceef2,0 28px 55px rgba(30,40,60,.22);font-family:'Plus Jakarta Sans',sans-serif;">
+        <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 7px;color:#1c1917;font-size:14px;font-weight:700;"><span>9:41</span><span style="letter-spacing:1px;color:#8a9099;font-size:13px;">▮▮▮ ◔ ⬤</span></div>
+        <div style="padding:14px 24px 6px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#f1efe9;display:flex;align-items:center;justify-content:center;color:#1c1917;font-size:18px;">‹</div>
+          <div style="flex:1;"><div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Narzędzia /</div><div style="font-size:22px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Redukcja punktów</div></div>
+        </div>
+        <div style="margin:14px 24px;border:1px solid #e6dff5;border-radius:22px;overflow:hidden;box-shadow:0 8px 22px rgba(139,92,246,.1);">
+          <div style="position:relative;height:150px;background:#ece9f4;">
+            <div id="map-reduce" style="position:absolute;inset:0;"></div>
+            <div style="position:absolute;top:12px;left:12px;z-index:500;pointer-events:none;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 11px;font-size:11px;font-weight:800;color:#4c1d95;box-shadow:0 2px 8px rgba(0,0,0,.14);">Trasa zachowana</div>
+            <div style="position:absolute;bottom:10px;left:12px;z-index:500;pointer-events:none;display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 11px;font-size:11px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.14);">
+              <span style="display:flex;align-items:center;gap:5px;color:#9a8fc0;"><span style="width:12px;height:3px;border-radius:2px;background:#cdbfe8;display:inline-block;"></span>oryginał</span>
+              <span style="display:flex;align-items:center;gap:5px;color:#4c1d95;"><span style="width:12px;height:3px;border-radius:2px;background:#8b5cf6;display:inline-block;"></span>uproszczona</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;padding:14px 16px 16px;background:#fff;">
+            <div style="flex:1;background:#f6f1fd;border-radius:14px;padding:12px;"><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8a6fc0;font-weight:700;">Punkty</div><div style="font-size:18px;font-weight:800;color:#4c1d95;margin-top:2px;"><span style="color:#b3a3d6;">8 412</span> → 2 240</div></div>
+            <div style="flex:1;background:#f6f1fd;border-radius:14px;padding:12px;"><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8a6fc0;font-weight:700;">Rozmiar</div><div style="font-size:18px;font-weight:800;color:#4c1d95;margin-top:2px;"><span style="color:#b3a3d6;">1.8 MB</span> → 0.5 MB</div></div>
+          </div>
+        </div>
+        <div style="margin:0 24px;background:#fff;border:1px solid #efece6;border-radius:16px;padding:16px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px;"><div style="font-size:14px;font-weight:700;color:#1c1917;">Dokładność</div><div style="font-size:13px;font-weight:800;color:#6d28d9;">Wysoka · 73%</div></div>
+          <div style="height:6px;border-radius:3px;background:#efe9fb;position:relative;"><div style="position:absolute;left:0;top:0;bottom:0;width:73%;background:#8b5cf6;border-radius:3px;"></div><div style="position:absolute;left:73%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#8b5cf6;box-shadow:0 2px 6px rgba(139,92,246,.5);"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:#a89ec0;font-weight:600;"><span>Mniejszy plik</span><span>Wierność trasie</span></div>
+        </div>
+        <div style="margin:14px 24px 0;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #efece6;border-radius:16px;padding:13px 15px;"><div style="flex:1;font-size:14px;font-weight:700;color:#1c1917;">Zachowaj wysokość i czas</div><div style="width:44px;height:26px;border-radius:13px;background:#8b5cf6;position:relative;"><div style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;"></div></div></div>
+        <div style="position:absolute;left:24px;right:24px;bottom:150px;">
+          <button style="width:100%;height:56px;border:none;border-radius:20px;background:#6d28d9;color:#fff;font-family:inherit;font-size:16px;font-weight:800;box-shadow:0 12px 26px rgba(109,40,217,.3);">Zredukuj i zapisz</button>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:50px;height:66px;background:#fcfbf9;border-top:1px solid #efece6;display:flex;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#1c1917;"><div style="font-size:18px;">▦</div><div style="font-size:10px;font-weight:800;">Menu</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">🗂</div><div style="font-size:10px;font-weight:600;">Pliki</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">⚙</div><div style="font-size:10px;font-weight:600;">Ustawienia</div></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:50px;background:#f4f1eb;border-top:1px solid #efece6;display:flex;align-items:center;justify-content:center;color:#b3aea4;font-size:11px;letter-spacing:.1em;">AD · Adaptive Banner</div>
+      </div>
+    </div>
+
+    <!-- ============ G · PORÓWNAJ ŚLADY ============ -->
+    <div style="flex:none;width:390px;">
+      <div style="font-size:13px;font-weight:700;color:#1c1917;margin-bottom:3px;">G · Porównaj ślady</div>
+      <div style="font-size:12px;color:#6b7077;margin-bottom:14px;">Dwa pliki na wykresie + przesuwanie w czasie</div>
+      <div style="width:390px;height:844px;background:#fcfbf9;border-radius:46px;position:relative;overflow:hidden;box-shadow:0 0 0 11px #eceef2,0 28px 55px rgba(30,40,60,.22);font-family:'Plus Jakarta Sans',sans-serif;">
+        <div style="height:50px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 30px 7px;color:#1c1917;font-size:14px;font-weight:700;"><span>9:41</span><span style="letter-spacing:1px;color:#8a9099;font-size:13px;">▮▮▮ ◔ ⬤</span></div>
+        <div style="padding:14px 24px 6px;display:flex;align-items:center;gap:14px;">
+          <div style="width:42px;height:42px;border-radius:13px;background:#f1efe9;display:flex;align-items:center;justify-content:center;color:#1c1917;font-size:18px;">‹</div>
+          <div style="flex:1;"><div style="font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;font-weight:700;">Narzędzia /</div><div style="font-size:22px;font-weight:800;color:#1c1917;letter-spacing:-.02em;">Porównaj ślady</div></div>
+        </div>
+        <div style="margin:6px 24px 0;display:flex;gap:10px;">
+          <div style="flex:1;display:flex;align-items:center;gap:8px;background:#eef2ff;border-radius:12px;padding:10px 12px;"><div style="width:9px;height:9px;border-radius:50%;background:#6366f1;"></div><div style="font-size:13px;font-weight:700;color:#3730a3;">pioneer.fit</div></div>
+          <div style="flex:1;display:flex;align-items:center;gap:8px;background:#fef3c7;border-radius:12px;padding:10px 12px;"><div style="width:9px;height:9px;border-radius:50%;background:#f59e0b;"></div><div style="font-size:13px;font-weight:700;color:#92400e;">assioma.fit</div></div>
+        </div>
+        <div style="padding:14px 24px 0;display:flex;gap:8px;">
+          <div style="flex:1;text-align:center;border-radius:12px;background:#6366f1;padding:10px 0;font-size:13px;font-weight:800;color:#fff;">Moc</div>
+          <div style="flex:1;text-align:center;border-radius:12px;background:#fff;border:1px solid #efece6;padding:9px 0;font-size:13px;font-weight:700;color:#6b7077;">Tętno</div>
+          <div style="flex:1;text-align:center;border-radius:12px;background:#fff;border:1px solid #efece6;padding:9px 0;font-size:13px;font-weight:700;color:#6b7077;">Kadencja</div>
+        </div>
+        <div style="margin:14px 24px 0;background:#fff;border:1px solid #ece9f6;border-radius:20px;padding:14px 14px 10px;box-shadow:0 8px 22px rgba(99,102,241,.08);">
+          <svg viewBox="0 0 340 130" width="100%" height="130" preserveAspectRatio="none" style="display:block;">
+            <g stroke="#f1eff8" stroke-width="1"><path d="M0,32 H340 M0,64 H340 M0,96 H340"/></g>
+            <path d="M0,86 L24,66 L48,78 L72,46 L96,56 L120,36 L144,62 L168,34 L192,54 L216,40 L240,26 L264,51 L288,38 L312,58 L340,44" fill="none" stroke="#6366f1" stroke-width="2.6"/>
+            <path d="M12,90 L36,70 L60,82 L84,50 L108,60 L132,40 L156,66 L180,38 L204,58 L228,44 L252,30 L276,55 L300,42 L324,62 L340,52" fill="none" stroke="#f59e0b" stroke-width="2.6"/>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:#a8a29e;font-weight:600;padding:0 2px;"><span>00:00</span><span>00:45</span><span>01:30</span></div>
+        </div>
+        <div style="margin:14px 24px 0;background:#fff;border:1px solid #ece9f6;border-radius:18px;padding:15px 16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:14px;font-weight:700;color:#1c1917;">Przesuń <span style="color:#b08900;background:#fef3c7;border-radius:6px;padding:1px 6px;">assioma.fit</span></div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:30px;height:30px;border-radius:9px;background:#eef2ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;">−</div>
+              <div style="font-size:15px;font-weight:800;color:#3730a3;min-width:46px;text-align:center;">+2.4 s</div>
+              <div style="width:30px;height:30px;border-radius:9px;background:#eef2ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;">＋</div>
+            </div>
+          </div>
+          <div style="height:6px;border-radius:3px;background:#eceaf7;position:relative;"><div style="position:absolute;left:50%;top:0;bottom:0;width:8%;background:#6366f1;border-radius:3px;"></div><div style="position:absolute;left:58%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#6366f1;box-shadow:0 2px 6px rgba(99,102,241,.5);"></div></div>
+          <div style="font-size:11px;color:#9a9eb5;font-weight:600;margin-top:9px;">Wyrównaj sygnały, gdy urządzenia startowały w różnym momencie</div>
+        </div>
+        <div style="margin:14px 24px 0;display:flex;gap:10px;">
+          <div style="flex:1;background:#eef2ff;border-radius:14px;padding:12px;"><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#7c83c4;font-weight:700;">Śr. moc A</div><div style="font-size:20px;font-weight:800;color:#3730a3;">248 W</div></div>
+          <div style="flex:1;background:#fef3c7;border-radius:14px;padding:12px;"><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#b08900;font-weight:700;">Śr. moc B</div><div style="font-size:20px;font-weight:800;color:#92400e;">252 W</div></div>
+          <div style="flex:1;background:#f3f1ec;border-radius:14px;padding:12px;"><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9a9488;font-weight:700;">Różnica</div><div style="font-size:20px;font-weight:800;color:#1c1917;">+1.6%</div></div>
+        </div>
+        <div style="position:absolute;left:24px;right:24px;bottom:150px;display:flex;gap:12px;">
+          <button style="flex:1;height:56px;border:none;border-radius:20px;background:#4f46e5;color:#fff;font-family:inherit;font-size:16px;font-weight:800;box-shadow:0 12px 26px rgba(79,70,229,.32);">Zapisz porównanie</button>
+          <button style="width:56px;height:56px;border:none;border-radius:20px;background:#eef2ff;color:#4f46e5;font-size:18px;">↺</button>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:50px;height:66px;background:#fcfbf9;border-top:1px solid #efece6;display:flex;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#1c1917;"><div style="font-size:18px;">▦</div><div style="font-size:10px;font-weight:800;">Menu</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">🗂</div><div style="font-size:10px;font-weight:600;">Pliki</div></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#b0aaa2;"><div style="font-size:18px;">⚙</div><div style="font-size:10px;font-weight:600;">Ustawienia</div></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:50px;background:#f4f1eb;border-top:1px solid #efece6;display:flex;align-items:center;justify-content:center;color:#b3aea4;font-size:11px;letter-spacing:.1em;">AD · Adaptive Banner</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() { this.initMaps(); }
+  initMaps() {
+    if (this._mapsInit) return;
+    const L = window.L;
+    if (!L || !document.getElementById('map-scal')) { setTimeout(() => this.initMaps(), 120); return; }
+    this._mapsInit = true;
+
+    const route = [
+      [49.2920,19.9400],[49.2950,19.9460],[49.2990,19.9490],[49.3010,19.9560],
+      [49.3050,19.9600],[49.3080,19.9670],[49.3100,19.9720],[49.3140,19.9780],
+      [49.3170,19.9830],[49.3200,19.9900],[49.3230,19.9960],[49.3270,20.0010],
+      [49.3300,20.0080],[49.3320,20.0150],[49.3360,20.0200],[49.3390,20.0270]
+    ];
+
+    const opts = { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, boxZoom:false, keyboard:false, touchZoom:false, tap:false, attributionControl:true };
+    const tiles = (m) => L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'© OpenStreetMap' }).addTo(m);
+    const fit = (m, coords) => setTimeout(() => { m.invalidateSize(); m.fitBounds(L.latLngBounds(coords), { padding:[22,22] }); }, 280);
+    const dot = (m, p, fill, stroke, r) => L.circleMarker(p, { radius:r||6, fillColor:fill, color:stroke||'#fff', weight:2.5, fillOpacity:1 }).addTo(m);
+
+    // SCAL — trasa po scaleniu, 3 segmenty (3 pliki)
+    const m1 = L.map('map-scal', opts); m1.attributionControl.setPrefix(false); tiles(m1);
+    L.polyline(route, { color:'#ffffff', weight:8, opacity:.9 }).addTo(m1);
+    L.polyline(route.slice(0,7),  { color:'#34d399', weight:5 }).addTo(m1);
+    L.polyline(route.slice(6,12), { color:'#10b981', weight:5 }).addTo(m1);
+    L.polyline(route.slice(11),   { color:'#059669', weight:5 }).addTo(m1);
+    dot(m1, route[0], '#059669'); dot(m1, route[route.length-1], '#059669');
+    fit(m1, route);
+
+    // PRZYTNIJ — pełna trasa wyblakła + zachowany odcinek + uchwyty
+    const m2 = L.map('map-trim', opts); m2.attributionControl.setPrefix(false); tiles(m2);
+    L.polyline(route, { color:'#5a7196', weight:4, opacity:.5, dashArray:'2 8' }).addTo(m2);
+    const kept = route.slice(4,12);
+    L.polyline(kept, { color:'#ffffff', weight:8, opacity:.9 }).addTo(m2);
+    L.polyline(kept, { color:'#1d4ed8', weight:5 }).addTo(m2);
+    dot(m2, route[0], '#cbd5e6', '#fff', 5); dot(m2, route[route.length-1], '#cbd5e6', '#fff', 5);
+    dot(m2, route[4], '#ffffff', '#1d4ed8', 7); dot(m2, route[11], '#1d4ed8', '#fff', 7);
+    fit(m2, route);
+
+    // REDUKCJA — oryginał (gęsty) vs uproszczona (mniej wierzchołków)
+    const m3 = L.map('map-reduce', opts); m3.attributionControl.setPrefix(false); tiles(m3);
+    L.polyline(route, { color:'#9a8fc0', weight:5, opacity:.6 }).addTo(m3);
+    const simp = [route[0], route[3], route[6], route[9], route[12], route[15]];
+    L.polyline(simp, { color:'#7c3aed', weight:3 }).addTo(m3);
+    simp.forEach(p => dot(m3, p, '#6d28d9', '#fff', 4));
+    fit(m3, route);
+  }
+}
+</script>
+</body>
+</html>
