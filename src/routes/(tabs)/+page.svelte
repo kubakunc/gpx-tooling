@@ -68,7 +68,7 @@
 <div class="flex items-center justify-between px-6 pb-2 pt-[18px]">
   <div>
     <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Suite</div>
-    <div class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Tools</div>
+    <h1 class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Tools</h1>
   </div>
   <div
     class="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-ink text-[16px] font-extrabold text-white"

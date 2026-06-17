@@ -16,6 +16,6 @@
   </a>
   <div class="flex-1">
     <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">Tools /</div>
-    <div class="text-[22px] font-extrabold tracking-[-0.02em] text-ink">{title}</div>
+    <h1 data-testid="tool-title" class="text-[22px] font-extrabold tracking-[-0.02em] text-ink">{title}</h1>
   </div>
 </div>

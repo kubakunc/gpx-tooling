@@ -106,6 +106,7 @@
         </p>
         <button
           type="button"
+          data-testid="import-button"
           class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}
@@ -172,7 +173,7 @@
           </div>
           <div class="text-center">
             <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Keep</div>
-            <div class="text-[15px] font-extrabold" style="color:{t.button};">{keptLabel}</div>
+            <div data-testid="keep-stat" class="text-[15px] font-extrabold" style="color:{t.button};">{keptLabel}</div>
           </div>
           <div class="rounded-[11px] px-[11px] py-[7px] text-right" style="background:{t.tile};">
             <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">To</div>

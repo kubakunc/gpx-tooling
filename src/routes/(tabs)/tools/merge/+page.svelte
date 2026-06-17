@@ -90,6 +90,7 @@
         </p>
         <button
           type="button"
+          data-testid="import-button"
           class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}
@@ -123,6 +124,7 @@
         </div>
         <button
           type="button"
+          data-testid="add-button"
           class="bg-transparent p-0 text-[12px] font-extrabold leading-none"
           style="color:{t.button};"
           disabled={busy}
@@ -135,6 +137,7 @@
       <div class="flex flex-col gap-[10px] px-6 pb-4 pt-[10px]">
         {#each $loadedFiles as f, i (f.id)}
           <div
+            data-testid="file-row"
             class="flex items-center gap-[13px] rounded-[18px] border bg-white p-[13px]"
             style="border-color:#eef0ec;box-shadow:0 5px 14px {rgba(t.button, 0.05)};"
           >
@@ -199,6 +202,7 @@
         </div>
       {/if}
       <button
+        data-testid="merge-export"
         class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
         disabled={busy || $loadedFiles.length < 2}

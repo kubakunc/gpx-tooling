@@ -39,7 +39,7 @@
 <div class="flex h-full flex-col">
   <div class="px-6 pb-2 pt-[18px]">
     <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Suite</div>
-    <div class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Files</div>
+    <h1 class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Files</h1>
   </div>
 
   <div class="flex-1 overflow-y-auto">
@@ -59,6 +59,7 @@
       <div class="flex flex-col gap-[10px] px-6 pb-4 pt-[10px]">
         {#each $loadedFiles as f (f.id)}
           <div
+            data-testid="file-row"
             class="flex items-center gap-[13px] rounded-[18px] border bg-white p-[13px]"
             style="border-color:#eef0ec;box-shadow:0 5px 14px rgba(0,0,0,0.04);"
           >
@@ -84,6 +85,7 @@
   <div class="px-6 pb-3 pt-2">
     <button
       type="button"
+      data-testid="import-button"
       class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] bg-ink text-[16px] font-extrabold text-white"
       disabled={busy}
       onclick={importFiles}

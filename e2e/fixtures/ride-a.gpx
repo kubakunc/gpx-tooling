@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GPX Tooling Suite E2E"
+     xmlns="http://www.topografix.com/GPX/1/1"
+     xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+  <trk>
+    <name>Ride A</name>
+    <trkseg>
+      <trkpt lat="49.2000" lon="19.9000">
+        <ele>500</ele>
+        <time>2026-06-17T08:00:00Z</time>
+        <extensions><gpxtpx:TrackPointExtension>
+          <gpxtpx:hr>120</gpxtpx:hr><gpxtpx:cad>78</gpxtpx:cad><power>180</power>
+        </gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="49.2010" lon="19.9015">
+        <ele>512</ele>
+        <time>2026-06-17T08:00:10Z</time>
+        <extensions><gpxtpx:TrackPointExtension>
+          <gpxtpx:hr>128</gpxtpx:hr><gpxtpx:cad>80</gpxtpx:cad><power>210</power>
+        </gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="49.2025" lon="19.9032">
+        <ele>505</ele>
+        <time>2026-06-17T08:00:20Z</time>
+        <extensions><gpxtpx:TrackPointExtension>
+          <gpxtpx:hr>134</gpxtpx:hr><gpxtpx:cad>82</gpxtpx:cad><power>225</power>
+        </gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="49.2041" lon="19.9050">
+        <ele>530</ele>
+        <time>2026-06-17T08:00:30Z</time>
+        <extensions><gpxtpx:TrackPointExtension>
+          <gpxtpx:hr>140</gpxtpx:hr><gpxtpx:cad>85</gpxtpx:cad><power>240</power>
+        </gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="49.2060" lon="19.9072">
+        <ele>548</ele>
+        <time>2026-06-17T08:00:40Z</time>
+        <extensions><gpxtpx:TrackPointExtension>
+          <gpxtpx:hr>145</gpxtpx:hr><gpxtpx:cad>86</gpxtpx:cad><power>255</power>
+        </gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+      <trkpt lat="49.2082" lon="19.9098">
+        <ele>540</ele>
+        <time>2026-06-17T08:00:50Z</time>
+        <extensions><gpxtpx:TrackPointExtension>
+          <gpxtpx:hr>148</gpxtpx:hr><gpxtpx:cad>88</gpxtpx:cad><power>265</power>
+        </gpxtpx:TrackPointExtension></extensions>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

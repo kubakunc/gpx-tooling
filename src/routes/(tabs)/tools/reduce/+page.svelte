@@ -133,6 +133,7 @@
         </p>
         <button
           type="button"
+          data-testid="import-button"
           class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}
@@ -173,7 +174,7 @@
             <div class="flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">
               Points {#if calculating}<Spinner />{/if}
             </div>
-            <div class="mt-[2px] text-[18px] font-extrabold" style="color:{t.title};">
+            <div data-testid="points-stat" class="mt-[2px] text-[18px] font-extrabold" style="color:{t.title};">
               <span style="color:#b3a3d6;">{formatCount(points.length)}</span> → {calculating ? 'calculating…' : formatCount(reduced.length)}
             </div>
           </div>
