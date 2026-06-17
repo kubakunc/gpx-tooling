@@ -13,6 +13,9 @@
   import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
   import { exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import { debounce } from '$lib/util/debounce';
+  import type { TrackPoint } from '$lib/domain/entities/TrackPoint';
+  import type { SmoothingLevel } from '$lib/domain/usecases/smoothElevation';
   import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.elevation;
@@ -34,7 +37,28 @@
   let points = $derived(activeFile?.points ?? []);
 
   let level = $derived(elevationFixLevelFromPercent(percent));
-  let corrected = $derived(points.length ? smoothElevation(repairElevation(points), level) : []);
+  let calculating = $state(false);
+
+  // Debounce the smoothing recompute so dragging the slider doesn't repair +
+  // smooth on every pixel. Kept on the main thread (fast), but off the hot path.
+  let corrected = $state<TrackPoint[]>([]);
+  function recompute(pts: TrackPoint[], lvl: SmoothingLevel) {
+    corrected = pts.length ? smoothElevation(repairElevation(pts), lvl) : [];
+    calculating = false;
+  }
+  const debouncedRecompute = debounce(recompute, 150);
+  $effect(() => {
+    // Don't flash a spinner when there's nothing to compute (no file / no
+    // points). Mirror Reduce's graceful empty handling: clear state, no spinner.
+    if (points.length === 0) {
+      debouncedRecompute.cancel();
+      corrected = [];
+      calculating = false;
+      return;
+    }
+    calculating = true;
+    debouncedRecompute(points, level);
+  });
 
   let gainBefore = $derived(elevationGainMeters(points));
   let gainAfter = $derived(elevationGainMeters(corrected));
@@ -62,7 +86,7 @@
   }
 
   async function applyAndSave() {
-    if (busy || !activeFile || corrected.length === 0) return;
+    if (busy || calculating || !activeFile || corrected.length === 0) return;
     busy = true;
     try {
       const name = exportFilename;
@@ -142,8 +166,12 @@
             <div class="text-[20px] font-extrabold line-through" style="color:#a8a29e;">{Math.round(gainBefore)} m</div>
           </div>
           <div class="text-right">
-            <div class="text-[11px]" style="color:{t.button};">Corrected</div>
-            <div class="text-[20px] font-extrabold" style="color:{t.title};">{Math.round(gainAfter)} m</div>
+            <div class="flex items-center justify-end gap-1 text-[11px]" style="color:{t.button};">
+              Corrected {#if calculating}<Spinner />{/if}
+            </div>
+            <div class="text-[20px] font-extrabold" style="color:{t.title};">
+              {calculating ? '…' : `${Math.round(gainAfter)} m`}
+            </div>
           </div>
         </div>
       </div>
@@ -214,10 +242,10 @@
         type="button"
         class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
-        disabled={busy || corrected.length === 0}
+        disabled={busy || calculating || corrected.length === 0}
         onclick={applyAndSave}
       >
-        {#if busy}<Spinner /> Working…{:else}Apply correction{/if}
+        {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Apply correction{/if}
       </button>
     </div>
   {/if}

@@ -5,6 +5,7 @@ import { Share } from '@capacitor/share';
 import type { GpxFile } from '$lib/domain/entities/GpxFile';
 import { importTrack } from '$lib/data/parsing/TrackImporter';
 import { ParseError } from '$lib/domain/errors';
+import { gpxWorkerClient } from '$lib/workers/gpxWorkerClient';
 
 /** Decode a base64 string to a byte array. */
 export function decodeBase64Bytes(b64: string): Uint8Array {
@@ -62,6 +63,11 @@ function defaultDownload(xml: string, filename: string): void {
 export interface FileServiceDeps {
   /** Injectable web downloader (for tests / custom hosts). */
   download?: (xml: string, filename: string) => void;
+  /**
+   * Injectable GPX-text parser. Defaults to the Web Worker client (off the main
+   * thread, with a synchronous fallback). Overridable for tests.
+   */
+  parseGpxText?: (name: string, text: string) => Promise<GpxFile>;
 }
 
 /**
@@ -70,9 +76,16 @@ export interface FileServiceDeps {
  */
 export class FileService {
   private download: (xml: string, filename: string) => void;
+  private parseGpxText: (name: string, text: string) => Promise<GpxFile>;
 
   constructor(deps: FileServiceDeps = {}) {
     this.download = deps.download ?? defaultDownload;
+    this.parseGpxText =
+      deps.parseGpxText ??
+      (async (name, text) => {
+        const { name: parsedName, points } = await gpxWorkerClient.runParse(name, { text });
+        return { name: parsedName, points };
+      });
   }
 
   /**
@@ -118,9 +131,11 @@ export class FileService {
   /** Read a picked file (text for GPX, bytes for FIT) and decode it. */
   private async readAndParse(file: { name: string; data?: string; path?: string }): Promise<GpxFile> {
     if (isFitName(file.name)) {
+      // FIT bytes are decoded synchronously (binary transfer to a worker adds
+      // little here); GPX text parsing is offloaded to the worker client.
       return importTrack(file.name, { bytes: await this.readPickedBytes(file) });
     }
-    return importTrack(file.name, { text: await this.readPickedText(file) });
+    return this.parseGpxText(file.name, await this.readPickedText(file));
   }
 
   private async readPickedText(file: { name: string; data?: string; path?: string }): Promise<string> {
@@ -149,19 +164,30 @@ export class FileService {
    * download (web). Errors are surfaced with friendly messages.
    */
   async exportAndShare(xml: string, filename: string): Promise<void> {
-    const name = ensureExportExt(filename);
+    await this.writeAndShare(xml, ensureExportExt(filename));
+  }
+
+  /**
+   * Share an arbitrary text file under the given filename as-is (no extension
+   * forced). Used for non-GPX outputs like the Compare CSV.
+   */
+  async shareTextFile(text: string, filename: string): Promise<void> {
+    await this.writeAndShare(text, filename);
+  }
+
+  private async writeAndShare(text: string, name: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
         await Filesystem.writeFile({
           path: name,
-          data: xml,
+          data: text,
           directory: Directory.Cache,
           encoding: Encoding.UTF8
         });
         const { uri } = await Filesystem.getUri({ path: name, directory: Directory.Cache });
         await Share.share({ title: name, url: uri });
       } else {
-        this.download(xml, name);
+        this.download(text, name);
       }
     } catch (e) {
       throw new Error(friendlyImportError(e));

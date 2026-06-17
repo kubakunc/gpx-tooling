@@ -56,7 +56,7 @@
       iconSize: 21,
       title: 'Compare tracks',
       subtitle: 'Chart two files together',
-      soon: true
+      soon: false
     }
   ] as const;
 

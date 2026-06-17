@@ -243,6 +243,45 @@ describe('exportAndShare', () => {
   });
 });
 
+describe('injectable GPX parser', () => {
+  it('routes GPX text through the injected parser (worker client by default)', async () => {
+    isNativePlatform.mockReturnValue(false);
+    const parseGpxText = vi
+      .fn()
+      .mockResolvedValue({ name: 'r.gpx', points: [{ latitude: 1, longitude: 2, elevation: null, time: null, sensors: {} }] });
+    const svc = new FileService({ parseGpxText });
+    pickFiles.mockResolvedValue({
+      files: [{ name: 'r.gpx', data: toB64('<gpx/>') }]
+    });
+    const out = await svc.pickAndImportGpx();
+    expect(parseGpxText).toHaveBeenCalledWith('r.gpx', '<gpx/>');
+    expect(out[0].name).toBe('r.gpx');
+  });
+});
+
+describe('shareTextFile', () => {
+  it('web: downloads the text under the exact filename (no extension forced)', async () => {
+    isNativePlatform.mockReturnValue(false);
+    const download = vi.fn();
+    const svc = new FileService({ download });
+    await svc.shareTextFile('a,b\n1,2', 'compare.csv');
+    expect(download).toHaveBeenCalledWith('a,b\n1,2', 'compare.csv');
+  });
+
+  it('native: writes and shares the text file', async () => {
+    isNativePlatform.mockReturnValue(true);
+    writeFile.mockResolvedValue({});
+    getUri.mockResolvedValue({ uri: 'file:///cache/compare.csv' });
+    share.mockResolvedValue({});
+    const svc = new FileService();
+    await svc.shareTextFile('a,b', 'compare.csv');
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'compare.csv', data: 'a,b' })
+    );
+    expect(share).toHaveBeenCalled();
+  });
+});
+
 describe('native read with Blob data', () => {
   it('reads a Blob result via .text()', async () => {
     isNativePlatform.mockReturnValue(true);
