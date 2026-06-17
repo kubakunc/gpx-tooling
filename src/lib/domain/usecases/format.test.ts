@@ -53,4 +53,14 @@ describe('format helpers', () => {
   it('exportName honors a custom extension', () => {
     expect(exportName('track.gpx', 'converted', 'kml')).toBe('track-converted.kml');
   });
+
+  it('exportName strips fit/tcx/kml source extensions too', () => {
+    expect(exportName('ride.fit', 'elev')).toBe('ride-elev.gpx');
+    expect(exportName('ride.TCX', 'x', 'kml')).toBe('ride-x.kml');
+  });
+
+  it('exportName supports an empty suffix (format conversion)', () => {
+    expect(exportName('ride.gpx', '', 'tcx')).toBe('ride.tcx');
+    expect(exportName('', '', 'kml')).toBe('track.kml');
+  });
 });

@@ -1,17 +1,71 @@
 <script lang="ts">
   import ToolHeader from '$lib/components/ToolHeader.svelte';
-  import Slider from '$lib/components/Slider.svelte';
-  import SegmentedControl from '$lib/components/SegmentedControl.svelte';
+  import Spinner from '$lib/components/Spinner.svelte';
+  import ActiveFileSelector from '$lib/components/ActiveFileSelector.svelte';
   import { toolThemes, rgba } from '$lib/toolThemes';
+  import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
+  import { editSession, setFileId, resetEditSession } from '$lib/stores/editSession';
+  import { fileService } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
+  import { repairElevation } from '$lib/domain/usecases/repairElevation';
+  import { smoothElevation, elevationFixLevelFromPercent } from '$lib/domain/usecases/smoothElevation';
+  import { elevationGainMeters } from '$lib/domain/usecases/stats';
+  import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
+  import { exportName } from '$lib/domain/usecases/format';
+  import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
 
   const t = toolThemes.elevation;
+  const LEVEL_LABEL = { low: 'Low', medium: 'Medium', high: 'High' } as const;
 
-  const sources = ['GPS', 'SRTM', 'Mapbox'];
-  const selectedIndex = sources.indexOf('SRTM');
+  let busy = $state(false);
+  let percent = $state(55);
 
-  function notYet() {
-    showToast("This tool isn't available yet", 'info');
+  let activeFile = $derived(
+    $loadedFiles.find((f) => f.id === $editSession.fileId) ?? $loadedFiles[0] ?? null
+  );
+  let points = $derived(activeFile?.points ?? []);
+
+  let level = $derived(elevationFixLevelFromPercent(percent));
+  let corrected = $derived(points.length ? smoothElevation(repairElevation(points), level) : []);
+
+  let gainBefore = $derived(elevationGainMeters(points));
+  let gainAfter = $derived(elevationGainMeters(corrected));
+
+  let beforeProfile = $derived(elevationProfilePoints(points, 340, 104));
+  let afterProfile = $derived(elevationProfilePoints(corrected, 340, 104));
+
+  let exportFilename = $derived(activeFile ? exportName(activeFile.name, 'elev') : '');
+
+  async function importFile() {
+    if (busy) return;
+    busy = true;
+    try {
+      const files = await fileService.pickAndImportGpx();
+      if (files.length === 0) return;
+      const added = addFiles(files);
+      resetEditSession();
+      setFileId(added[0].id);
+      showToast(`Imported ${files[0].name}`, 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Import failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function applyAndSave() {
+    if (busy || !activeFile || corrected.length === 0) return;
+    busy = true;
+    try {
+      const name = exportFilename;
+      const xml = serializeGpx(corrected, name);
+      await fileService.exportAndShare(xml, name);
+      showToast('Corrected file exported', 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      busy = false;
+    }
   }
 </script>
 
@@ -19,98 +73,143 @@
   <div class="flex-1 overflow-y-auto">
     <ToolHeader title="Elevation fix" />
 
-    <div class="px-6 pt-1 text-[11px] font-semibold text-ink-faint">
-      Preview — not functional yet
-    </div>
-
-    <div class="opacity-60 pointer-events-none">
-    <div
-      class="mx-6 my-[14px] rounded-[22px] border bg-white px-[14px] pb-3 pt-4"
-      style="border-color:#f3ead2;box-shadow:0 8px 22px {rgba(t.icon, 0.1)};"
-    >
-      <div class="mb-2 flex items-center gap-4 text-[11px] font-bold">
-        <div class="flex items-center gap-[6px]" style="color:#a8a29e;">
-          <span class="inline-block h-[3px] w-[14px] rounded-[2px]" style="background:#d6c4a0;"></span>Raw GPS
-        </div>
-        <div class="flex items-center gap-[6px]" style="color:{t.button};">
-          <span class="inline-block h-[3px] w-[14px] rounded-[2px]" style="background:{t.icon};"></span>Corrected
-        </div>
-      </div>
-      <svg viewBox="0 0 340 104" width="100%" height="104" preserveAspectRatio="none" class="block">
-        <defs
-          ><linearGradient id="elevg" x1="0" y1="0" x2="0" y2="1"
-            ><stop offset="0" stop-color={t.icon} stop-opacity="0.3" /><stop
-              offset="1"
-              stop-color={t.icon}
-              stop-opacity="0"
-            /></linearGradient
-          ></defs
+    {#if !activeFile}
+      <div class="flex flex-col items-center justify-center px-6 py-20 text-center">
+        <div class="text-[15px] font-bold text-ink">No file loaded</div>
+        <p class="mt-2 max-w-[260px] text-[13px] leading-[1.5]" style="color:#8a9099;">
+          Import a track to repair its elevation profile and total gain.
+        </p>
+        <button
+          type="button"
+          class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
+          style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
+          disabled={busy}
+          onclick={importFile}
         >
-        <path
-          d="M0,80 L20,60 L40,72 L60,40 L80,66 L100,30 L120,58 L140,24 L160,52 L180,20 L200,44 L220,16 L240,40 L260,22 L280,46 L300,34 L320,58 L340,44 L340,104 L0,104 Z"
-          fill="url(#elevg)"
-        />
-        <path
-          d="M0,82 L20,56 L40,78 L60,36 L80,72 L100,26 L120,64 L140,20 L160,58 L180,16 L200,50 L220,12 L240,46 L260,18 L280,52 L300,30 L320,64 L340,40"
-          fill="none"
-          stroke="#d6c4a0"
-          stroke-width="2"
-          stroke-dasharray="3 3"
-        />
-        <path
-          d="M0,80 L20,60 L40,72 L60,40 L80,66 L100,30 L120,58 L140,24 L160,52 L180,20 L200,44 L220,16 L240,40 L260,22 L280,46 L300,34 L320,58 L340,44"
-          fill="none"
-          stroke={t.icon}
-          stroke-width="2.6"
-        />
-      </svg>
-      <div class="mt-[10px] flex justify-between">
-        <div>
-          <div class="text-[11px]" style="color:#b08b4a;">Gain before</div>
-          <div class="text-[20px] font-extrabold line-through" style="color:#a8a29e;">1057 m</div>
-        </div>
-        <div class="text-right">
-          <div class="text-[11px]" style="color:{t.button};">Corrected</div>
-          <div class="text-[20px] font-extrabold" style="color:{t.title};">1042 m</div>
-        </div>
+          {#if busy}<Spinner /> Working…{:else}Import file{/if}
+        </button>
       </div>
-    </div>
-
-    <div class="px-6 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">
-      Elevation source
-    </div>
-    <div class="flex gap-2 px-6 pt-[10px]">
-      <SegmentedControl
-        options={sources}
-        {selectedIndex}
-        radius={13}
-        selectedBg={t.tile}
-        selectedBorder={t.icon}
-        selectedText={t.title}
-        selectedPadY={10}
-        unselectedPadY={11}
-        textSize={13}
+    {:else}
+      <ActiveFileSelector
+        files={$loadedFiles}
+        active={activeFile}
+        tile={t.tile}
+        accent={t.icon}
+        title={t.title}
       />
-    </div>
 
-    <div class="mx-6 mb-4 mt-[18px] rounded-[16px] border bg-white px-4 py-[14px]" style="border-color:#efece6;">
-      <div class="mb-[10px] flex justify-between">
-        <div class="text-[14px] font-bold text-ink">Smoothing</div>
-        <div class="text-[13px] font-extrabold" style="color:{t.button};">Medium</div>
+      <div
+        class="mx-6 my-[14px] rounded-[22px] border bg-white px-[14px] pb-3 pt-4"
+        style="border-color:#f3ead2;box-shadow:0 8px 22px {rgba(t.icon, 0.1)};"
+      >
+        <div class="mb-2 flex items-center gap-4 text-[11px] font-bold">
+          <div class="flex items-center gap-[6px]" style="color:#a8a29e;">
+            <span class="inline-block h-[3px] w-[14px] rounded-[2px]" style="background:#d6c4a0;"></span>Raw GPS
+          </div>
+          <div class="flex items-center gap-[6px]" style="color:{t.button};">
+            <span class="inline-block h-[3px] w-[14px] rounded-[2px]" style="background:{t.icon};"></span>Corrected
+          </div>
+        </div>
+        <svg viewBox="0 0 340 104" width="100%" height="104" preserveAspectRatio="none" class="block">
+          <defs
+            ><linearGradient id="elevg" x1="0" y1="0" x2="0" y2="1"
+              ><stop offset="0" stop-color={t.icon} stop-opacity="0.3" /><stop
+                offset="1"
+                stop-color={t.icon}
+                stop-opacity="0"
+              /></linearGradient
+            ></defs
+          >
+          {#if beforeProfile}
+            <polyline points={beforeProfile} fill="none" stroke="#d6c4a0" stroke-width="2" stroke-dasharray="3 3" />
+          {/if}
+          {#if afterProfile}
+            <polyline points={afterProfile} fill="none" stroke={t.icon} stroke-width="2.6" />
+          {/if}
+        </svg>
+        <div class="mt-[10px] flex justify-between">
+          <div>
+            <div class="text-[11px]" style="color:#b08b4a;">Gain before</div>
+            <div class="text-[20px] font-extrabold line-through" style="color:#a8a29e;">{Math.round(gainBefore)} m</div>
+          </div>
+          <div class="text-right">
+            <div class="text-[11px]" style="color:{t.button};">Corrected</div>
+            <div class="text-[20px] font-extrabold" style="color:{t.title};">{Math.round(gainAfter)} m</div>
+          </div>
+        </div>
       </div>
-      <Slider percent={55} accent={t.icon} trackBg="#f1ead9" />
-    </div>
-    </div>
+
+      <div class="px-6 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">
+        Elevation source
+      </div>
+      <div class="flex gap-2 px-6 pt-[10px]">
+        <div
+          class="flex-1 rounded-[13px] text-center text-[13px] font-extrabold"
+          style="padding-top:10px;padding-bottom:10px;background:{t.tile};border:2px solid {t.icon};color:{t.title};"
+        >
+          GPS
+        </div>
+        <div
+          class="relative flex-1 cursor-not-allowed rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f] opacity-50"
+          style="padding-top:11px;padding-bottom:11px;border-color:#efece6;"
+          aria-disabled="true"
+        >
+          SRTM
+          <span
+            class="absolute right-[6px] top-[5px] rounded-full px-[6px] py-[1px] text-[8px] font-bold uppercase tracking-[0.08em]"
+            style="background:rgba(255,255,255,0.8);color:#b08b4a;"
+          >
+            Soon
+          </span>
+        </div>
+        <div
+          class="relative flex-1 cursor-not-allowed rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f] opacity-50"
+          style="padding-top:11px;padding-bottom:11px;border-color:#efece6;"
+          aria-disabled="true"
+        >
+          Mapbox
+          <span
+            class="absolute right-[6px] top-[5px] rounded-full px-[6px] py-[1px] text-[8px] font-bold uppercase tracking-[0.08em]"
+            style="background:rgba(255,255,255,0.8);color:#b08b4a;"
+          >
+            Soon
+          </span>
+        </div>
+      </div>
+      <div class="px-6 pt-[6px] text-[11px]" style="color:#c2b48f;">
+        SRTM &amp; Mapbox online sources — coming soon. GPS uses the track's own elevation.
+      </div>
+
+      <div class="mx-6 mb-4 mt-[18px] rounded-[16px] border bg-white px-4 py-[14px]" style="border-color:#efece6;">
+        <div class="mb-[10px] flex justify-between">
+          <div class="text-[14px] font-bold text-ink">Smoothing</div>
+          <div class="text-[13px] font-extrabold" style="color:{t.button};">{LEVEL_LABEL[level]}</div>
+        </div>
+        <input
+          type="range" min="0" max="100" step="1" bind:value={percent}
+          class="w-full" style="accent-color:{t.icon};"
+        />
+        <div class="mt-2 flex justify-between text-[11px] font-semibold" style="color:#c2b48f;">
+          <span>Light</span><span>Strong</span>
+        </div>
+      </div>
+    {/if}
   </div>
 
-  <div class="px-6 pb-3 pt-2">
-    <button
-      type="button"
-      onclick={notYet}
-      class="h-[56px] w-full rounded-[20px] text-[16px] font-extrabold text-white"
-      style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
-    >
-      Apply correction
-    </button>
-  </div>
+  {#if activeFile}
+    <div class="px-6 pb-3 pt-2">
+      <div class="mb-[8px] text-center text-[12px]" style="color:#b08b4a;">
+        Saves as: <span class="font-bold">{exportFilename}</span>
+      </div>
+      <button
+        type="button"
+        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
+        style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
+        disabled={busy || corrected.length === 0}
+        onclick={applyAndSave}
+      >
+        {#if busy}<Spinner /> Working…{:else}Apply correction{/if}
+      </button>
+    </div>
+  {/if}
 </div>

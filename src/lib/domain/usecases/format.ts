@@ -36,9 +36,10 @@ export function formatBytes(bytes: number): string {
  * `-{suffix}.{ext}`. Falls back to `{suffix}.{ext}` when source is empty.
  */
 export function exportName(sourceName: string, suffix: string, ext = 'gpx'): string {
-  const base = sourceName.replace(/\.gpx$/i, '').trim();
-  if (!base) return `${suffix}.${ext}`;
-  return `${base}-${suffix}.${ext}`;
+  // Strip a trailing known track extension (gpx/fit/tcx/kml), case-insensitive.
+  const base = sourceName.replace(/\.(gpx|fit|tcx|kml)$/i, '').trim();
+  if (!base) return suffix ? `${suffix}.${ext}` : `track.${ext}`;
+  return suffix ? `${base}-${suffix}.${ext}` : `${base}.${ext}`;
 }
 
 /** Integer → grouped with thin spaces, e.g. 8412 → "8 412". */

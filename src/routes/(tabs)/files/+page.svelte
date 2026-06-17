@@ -48,7 +48,7 @@
         <div class="rounded-[18px] border p-[18px]" style="background:#fff;border-color:#efece6;">
           <div class="text-[15px] font-extrabold text-ink">No files yet</div>
           <p class="mt-[6px] text-[13px] leading-[1.55] text-ink-muted">
-            Import GPX tracks to keep them here, ready for any tool.
+            Import GPX or FIT tracks to keep them here, ready for any tool.
           </p>
         </div>
       </div>
@@ -88,7 +88,7 @@
       disabled={busy}
       onclick={importFiles}
     >
-      {#if busy}<Spinner /> Working…{:else}Import GPX files{/if}
+      {#if busy}<Spinner /> Working…{:else}Import GPX or FIT files{/if}
     </button>
   </div>
 </div>

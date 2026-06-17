@@ -82,7 +82,7 @@
       <div class="flex flex-col items-center justify-center px-6 py-20 text-center">
         <div class="text-[15px] font-bold text-ink">No file loaded</div>
         <p class="mt-2 max-w-[260px] text-[13px] leading-[1.5]" style="color:#8a9099;">
-          Import a GPX file to reduce its point count.
+          Import a GPX or FIT file to reduce its point count.
         </p>
         <button
           type="button"
@@ -91,7 +91,7 @@
           disabled={busy}
           onclick={importFile}
         >
-          {#if busy}<Spinner /> Working…{:else}Import GPX file{/if}
+          {#if busy}<Spinner /> Working…{:else}Import GPX or FIT file{/if}
         </button>
       </div>
     {:else}

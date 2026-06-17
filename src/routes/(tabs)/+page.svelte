@@ -29,7 +29,7 @@
       iconSize: 19,
       title: 'Convert',
       subtitle: 'GPX · FIT · TCX · KML',
-      soon: true
+      soon: false
     },
     {
       key: 'elevation',
@@ -38,7 +38,7 @@
       iconSize: 20,
       title: 'Elevation fix',
       subtitle: 'Fix profile & total gain',
-      soon: true
+      soon: false
     },
     {
       key: 'reduce',
