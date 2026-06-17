@@ -114,6 +114,7 @@
         </p>
         <button
           type="button"
+          data-testid="import-button"
           class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}
@@ -163,13 +164,13 @@
         <div class="mt-[10px] flex justify-between">
           <div>
             <div class="text-[11px]" style="color:#b08b4a;">Gain before</div>
-            <div class="text-[20px] font-extrabold line-through" style="color:#a8a29e;">{Math.round(gainBefore)} m</div>
+            <div data-testid="gain-before" class="text-[20px] font-extrabold line-through" style="color:#a8a29e;">{Math.round(gainBefore)} m</div>
           </div>
           <div class="text-right">
             <div class="flex items-center justify-end gap-1 text-[11px]" style="color:{t.button};">
               Corrected {#if calculating}<Spinner />{/if}
             </div>
-            <div class="text-[20px] font-extrabold" style="color:{t.title};">
+            <div data-testid="gain-after" class="text-[20px] font-extrabold" style="color:{t.title};">
               {calculating ? '…' : `${Math.round(gainAfter)} m`}
             </div>
           </div>

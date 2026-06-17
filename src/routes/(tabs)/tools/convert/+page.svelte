@@ -86,6 +86,7 @@
         </p>
         <button
           type="button"
+          data-testid="import-button"
           class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}

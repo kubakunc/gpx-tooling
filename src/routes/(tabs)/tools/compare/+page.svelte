@@ -295,15 +295,15 @@
       <div class="mx-6 mb-4 mt-[14px] flex gap-[10px]">
         <div class="flex-1 rounded-[14px] p-3" style="background:{t.tile};">
           <div class="text-[10px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Avg A</div>
-          <div class="text-[20px] font-extrabold" style="color:{t.title};">{fmtAvg(result.avgA)}</div>
+          <div data-testid="avg-a" class="text-[20px] font-extrabold" style="color:{t.title};">{fmtAvg(result.avgA)}</div>
         </div>
         <div class="flex-1 rounded-[14px] p-3" style="background:#fef3c7;">
           <div class="text-[10px] font-bold uppercase tracking-[0.08em]" style="color:#b08900;">Avg B</div>
-          <div class="text-[20px] font-extrabold" style="color:#92400e;">{fmtAvg(result.avgB)}</div>
+          <div data-testid="avg-b" class="text-[20px] font-extrabold" style="color:#92400e;">{fmtAvg(result.avgB)}</div>
         </div>
         <div class="flex-1 rounded-[14px] p-3" style="background:#f3f1ec;">
           <div class="text-[10px] font-bold uppercase tracking-[0.08em]" style="color:#9a9488;">Difference</div>
-          <div class="text-[20px] font-extrabold text-ink">{diffLabel}</div>
+          <div data-testid="diff" class="text-[20px] font-extrabold text-ink">{diffLabel}</div>
         </div>
       </div>
     {/if}

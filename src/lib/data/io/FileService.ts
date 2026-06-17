@@ -5,7 +5,6 @@ import { Share } from '@capacitor/share';
 import type { GpxFile } from '$lib/domain/entities/GpxFile';
 import { importTrack } from '$lib/data/parsing/TrackImporter';
 import { ParseError } from '$lib/domain/errors';
-import { gpxWorkerClient } from '$lib/workers/gpxWorkerClient';
 
 /** Decode a base64 string to a byte array. */
 export function decodeBase64Bytes(b64: string): Uint8Array {
@@ -64,8 +63,10 @@ export interface FileServiceDeps {
   /** Injectable web downloader (for tests / custom hosts). */
   download?: (xml: string, filename: string) => void;
   /**
-   * Injectable GPX-text parser. Defaults to the Web Worker client (off the main
-   * thread, with a synchronous fallback). Overridable for tests.
+   * Injectable GPX-text parser. Defaults to the MAIN-THREAD parser
+   * (`importTrack`), because GPX parsing uses `DOMParser`, which only exists on
+   * the main thread / in a WebView — never in a Web Worker. Overridable for
+   * tests. Must NOT be routed through the worker.
    */
   parseGpxText?: (name: string, text: string) => Promise<GpxFile>;
 }
@@ -80,12 +81,9 @@ export class FileService {
 
   constructor(deps: FileServiceDeps = {}) {
     this.download = deps.download ?? defaultDownload;
-    this.parseGpxText =
-      deps.parseGpxText ??
-      (async (name, text) => {
-        const { name: parsedName, points } = await gpxWorkerClient.runParse(name, { text });
-        return { name: parsedName, points };
-      });
+    // Default: parse on the MAIN THREAD via importTrack → parseGpx (DOMParser).
+    // A Web Worker has no DOMParser, so parsing must never be offloaded.
+    this.parseGpxText = deps.parseGpxText ?? (async (name, text) => importTrack(name, { text }));
   }
 
   /**
@@ -128,34 +126,38 @@ export class FileService {
     return parsed;
   }
 
-  /** Read a picked file (text for GPX, bytes for FIT) and decode it. */
+  /** Read a picked file (text for GPX, bytes for FIT) and parse it. */
   private async readAndParse(file: { name: string; data?: string; path?: string }): Promise<GpxFile> {
     if (isFitName(file.name)) {
-      // FIT bytes are decoded synchronously (binary transfer to a worker adds
-      // little here); GPX text parsing is offloaded to the worker client.
+      // FIT bytes are parsed on the main thread (pure binary decode).
       return importTrack(file.name, { bytes: await this.readPickedBytes(file) });
     }
+    // GPX text is parsed on the main thread (DOMParser is main-thread only).
     return this.parseGpxText(file.name, await this.readPickedText(file));
   }
 
   private async readPickedText(file: { name: string; data?: string; path?: string }): Promise<string> {
-    // Native: read the path off disk as UTF-8. Web: decode the base64 `data`.
+    // Prefer the picker's already-read base64 `data` (we pass `readData:true`)
+    // — it's available on every platform and avoids `Filesystem.readFile`
+    // choking on the picker's content-URI / cache `path` on device.
+    if (file.data) return decodeBase64Utf8(file.data);
+    // Native fallback: read the path off disk as UTF-8.
     if (Capacitor.isNativePlatform() && file.path) {
       const res = await Filesystem.readFile({ path: file.path, encoding: Encoding.UTF8 });
       return typeof res.data === 'string' ? res.data : await res.data.text();
     }
-    if (file.data) return decodeBase64Utf8(file.data);
     throw new ParseError(`No data for ${file.name}`);
   }
 
   private async readPickedBytes(file: { name: string; data?: string; path?: string }): Promise<Uint8Array> {
-    // Native: read the path off disk without an encoding → base64 `data`.
+    // Prefer the picker's already-read base64 `data` (see readPickedText).
+    if (file.data) return decodeBase64Bytes(file.data);
+    // Native fallback: read the path off disk without an encoding → base64.
     if (Capacitor.isNativePlatform() && file.path) {
       const res = await Filesystem.readFile({ path: file.path });
       if (typeof res.data === 'string') return decodeBase64Bytes(res.data);
       return new Uint8Array(await res.data.arrayBuffer());
     }
-    if (file.data) return decodeBase64Bytes(file.data);
     throw new ParseError(`No data for ${file.name}`);
   }
 

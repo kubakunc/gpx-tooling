@@ -15,6 +15,7 @@
     {@const active = item.match(pathname)}
     <a
       href={item.href}
+      data-testid="nav-{item.label.toLowerCase()}"
       class="flex flex-1 flex-col items-center justify-center gap-1"
       style="color:{active ? '#1c1917' : '#b0aaa2'};"
     >
