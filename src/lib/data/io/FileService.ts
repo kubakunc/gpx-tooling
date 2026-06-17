@@ -3,16 +3,26 @@ import { FilePicker } from '@capawesome/capacitor-file-picker';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import type { GpxFile } from '$lib/domain/entities/GpxFile';
-import { parseGpx } from '$lib/data/parsing/GpxParser';
+import { importTrack } from '$lib/data/parsing/TrackImporter';
 import { ParseError } from '$lib/domain/errors';
 
-/** Decode a base64 string to UTF-8 text (used for web file-picker `data`). */
-export function decodeBase64Utf8(b64: string): string {
-  // atob yields a binary (latin1) string; map to bytes then decode UTF-8.
+/** Decode a base64 string to a byte array. */
+export function decodeBase64Bytes(b64: string): Uint8Array {
+  // atob yields a binary (latin1) string; map char codes back to bytes.
   const binary = atob(b64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new TextDecoder('utf-8').decode(bytes);
+  return bytes;
+}
+
+/** Decode a base64 string to UTF-8 text (used for web file-picker `data`). */
+export function decodeBase64Utf8(b64: string): string {
+  return new TextDecoder('utf-8').decode(decodeBase64Bytes(b64));
+}
+
+/** True when a filename has a `.fit` extension (case-insensitive). */
+export function isFitName(name: string): boolean {
+  return /\.fit$/i.test(name);
 }
 
 /** Ensure a filename ends with a `.gpx` extension (case-insensitive). */
@@ -65,7 +75,10 @@ export class FileService {
     let picked;
     try {
       const result = await FilePicker.pickFiles({
-        types: ['application/gpx+xml'],
+        // Accept GPX and FIT. (FIT has no registered MIME; some pickers honor
+        // the extension list, so we keep the picker permissive and validate on
+        // import.)
+        types: ['application/gpx+xml', 'application/octet-stream'],
         readData: true
       });
       picked = result.files;
@@ -79,8 +92,7 @@ export class FileService {
     const errors: string[] = [];
     for (const file of picked) {
       try {
-        const text = await this.readPickedText(file);
-        parsed.push(parseGpx(text, file.name));
+        parsed.push(await this.readAndParse(file));
       } catch (e) {
         errors.push(`${file.name}: ${friendlyImportError(e)}`);
       }
@@ -88,10 +100,18 @@ export class FileService {
 
     if (parsed.length === 0) {
       throw new ParseError(
-        errors.length ? errors.join('; ') : 'No readable GPX files were selected.'
+        errors.length ? errors.join('; ') : 'No readable track files were selected.'
       );
     }
     return parsed;
+  }
+
+  /** Read a picked file (text for GPX, bytes for FIT) and decode it. */
+  private async readAndParse(file: { name: string; data?: string; path?: string }): Promise<GpxFile> {
+    if (isFitName(file.name)) {
+      return importTrack(file.name, { bytes: await this.readPickedBytes(file) });
+    }
+    return importTrack(file.name, { text: await this.readPickedText(file) });
   }
 
   private async readPickedText(file: { name: string; data?: string; path?: string }): Promise<string> {
@@ -101,6 +121,17 @@ export class FileService {
       return typeof res.data === 'string' ? res.data : await res.data.text();
     }
     if (file.data) return decodeBase64Utf8(file.data);
+    throw new ParseError(`No data for ${file.name}`);
+  }
+
+  private async readPickedBytes(file: { name: string; data?: string; path?: string }): Promise<Uint8Array> {
+    // Native: read the path off disk without an encoding → base64 `data`.
+    if (Capacitor.isNativePlatform() && file.path) {
+      const res = await Filesystem.readFile({ path: file.path });
+      if (typeof res.data === 'string') return decodeBase64Bytes(res.data);
+      return new Uint8Array(await res.data.arrayBuffer());
+    }
+    if (file.data) return decodeBase64Bytes(file.data);
     throw new ParseError(`No data for ${file.name}`);
   }
 

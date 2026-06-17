@@ -32,9 +32,22 @@ vi.mock('@capacitor/core', () => ({
 import {
   FileService,
   decodeBase64Utf8,
+  decodeBase64Bytes,
+  isFitName,
   ensureGpxExt,
   friendlyImportError
 } from './FileService';
+import { buildFitFixture, type FitFixtureRecord } from '$lib/data/parsing/fit/buildFitFixture';
+
+const FIT_REC: FitFixtureRecord = {
+  timestamp: 1000,
+  latSemicircles: Math.round((45 / 180) * 2 ** 31),
+  lonSemicircles: Math.round((15 / 180) * 2 ** 31),
+  altitudeRaw: (1200 + 500) * 5,
+  heartRate: 150,
+  power: 240
+};
+const fitB64 = (): string => Buffer.from(buildFitFixture([FIT_REC])).toString('base64');
 
 const GPX = (name: string) =>
   `<?xml version="1.0"?><gpx version="1.1" creator="t"><trk><name>${name}</name><trkseg>` +
@@ -52,6 +65,18 @@ describe('pure helpers', () => {
   it('decodeBase64Utf8 decodes UTF-8 (incl. multibyte)', () => {
     expect(decodeBase64Utf8(toB64('hello'))).toBe('hello');
     expect(decodeBase64Utf8(toB64('běžky → naměřeno'))).toBe('běžky → naměřeno');
+  });
+
+  it('decodeBase64Bytes round-trips arbitrary bytes', () => {
+    const bytes = new Uint8Array([0, 1, 2, 254, 255]);
+    const b64 = Buffer.from(bytes).toString('base64');
+    expect(Array.from(decodeBase64Bytes(b64))).toEqual([0, 1, 2, 254, 255]);
+  });
+
+  it('isFitName detects the .fit extension case-insensitively', () => {
+    expect(isFitName('ride.fit')).toBe(true);
+    expect(isFitName('RIDE.FIT')).toBe(true);
+    expect(isFitName('ride.gpx')).toBe(false);
   });
 
   it('ensureGpxExt appends .gpx when missing and leaves existing', () => {
@@ -78,6 +103,36 @@ describe('pickAndImportGpx', () => {
     expect(files).toHaveLength(1);
     expect(files[0].name).toBe('a.gpx');
     expect(files[0].points).toHaveLength(2);
+  });
+
+  it('imports a FIT file from web base64 bytes', async () => {
+    isNativePlatform.mockReturnValue(false);
+    pickFiles.mockResolvedValue({ files: [{ name: 'ride.fit', data: fitB64() }] });
+    const svc = new FileService();
+    const files = await svc.pickAndImportGpx();
+    expect(files).toHaveLength(1);
+    expect(files[0].name).toBe('ride.fit');
+    expect(files[0].points[0].latitude).toBeCloseTo(45, 4);
+  });
+
+  it('imports a FIT file from a native path (base64 readFile)', async () => {
+    isNativePlatform.mockReturnValue(true);
+    pickFiles.mockResolvedValue({ files: [{ name: 'ride.fit', path: '/tmp/ride.fit' }] });
+    readFile.mockResolvedValue({ data: fitB64() });
+    const svc = new FileService();
+    const files = await svc.pickAndImportGpx();
+    // No encoding passed for FIT bytes.
+    expect(readFile).toHaveBeenCalledWith(expect.objectContaining({ path: '/tmp/ride.fit' }));
+    expect(files[0].points).toHaveLength(1);
+  });
+
+  it('reads native FIT bytes from a Blob result', async () => {
+    isNativePlatform.mockReturnValue(true);
+    pickFiles.mockResolvedValue({ files: [{ name: 'ride.fit', path: '/tmp/ride.fit' }] });
+    readFile.mockResolvedValue({ data: new Blob([buildFitFixture([FIT_REC]).slice().buffer]) });
+    const svc = new FileService();
+    const files = await svc.pickAndImportGpx();
+    expect(files[0].points).toHaveLength(1);
   });
 
   it('reads native files via Filesystem.readFile using path', async () => {
