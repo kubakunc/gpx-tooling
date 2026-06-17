@@ -5,6 +5,11 @@ export default defineConfig({
   plugins: [sveltekit()],
   test: {
     include: ['src/**/*.{test,spec}.{js,ts}'],
-    environment: 'node'
+    environment: 'node',
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/domain/**', 'src/lib/data/**'],
+      thresholds: { lines: 90, functions: 90, branches: 90, statements: 90 }
+    }
   }
 });
