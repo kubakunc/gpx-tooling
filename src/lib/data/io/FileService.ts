@@ -149,19 +149,30 @@ export class FileService {
    * download (web). Errors are surfaced with friendly messages.
    */
   async exportAndShare(xml: string, filename: string): Promise<void> {
-    const name = ensureExportExt(filename);
+    await this.writeAndShare(xml, ensureExportExt(filename));
+  }
+
+  /**
+   * Share an arbitrary text file under the given filename as-is (no extension
+   * forced). Used for non-GPX outputs like the Compare CSV.
+   */
+  async shareTextFile(text: string, filename: string): Promise<void> {
+    await this.writeAndShare(text, filename);
+  }
+
+  private async writeAndShare(text: string, name: string): Promise<void> {
     try {
       if (Capacitor.isNativePlatform()) {
         await Filesystem.writeFile({
           path: name,
-          data: xml,
+          data: text,
           directory: Directory.Cache,
           encoding: Encoding.UTF8
         });
         const { uri } = await Filesystem.getUri({ path: name, directory: Directory.Cache });
         await Share.share({ title: name, url: uri });
       } else {
-        this.download(xml, name);
+        this.download(text, name);
       }
     } catch (e) {
       throw new Error(friendlyImportError(e));

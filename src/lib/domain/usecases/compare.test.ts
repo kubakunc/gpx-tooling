@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { COMPARE_METRICS, extractSeries, compareTracks } from './compare';
+import {
+  COMPARE_METRICS,
+  extractSeries,
+  compareTracks,
+  buildChartPaths,
+  comparisonToCsv
+} from './compare';
 import type { TrackPoint, Sensors } from '../entities/TrackPoint';
 
 const base = { latitude: 0, longitude: 0, elevation: null };
@@ -131,5 +137,48 @@ describe('compareTracks', () => {
     const r = compareTracks(a, b, 'cadence', 0);
     expect(r.avgA).toBe(0);
     expect(r.diffPercent).toBeNull();
+  });
+});
+
+describe('buildChartPaths', () => {
+  it('returns empty strings when both series are empty', () => {
+    expect(buildChartPaths([], [], 100, 50)).toEqual({ a: '', b: '' });
+  });
+
+  it('scales the shared domain into the box (max value at top, min at bottom)', () => {
+    const a = [
+      { t: 0, v: 0 },
+      { t: 10, v: 100 }
+    ];
+    const r = buildChartPaths(a, [], 100, 50);
+    // t=0 -> x=0; v=0 is the min -> bottom (y=height); v=100 max -> top (y=0).
+    expect(r.a).toBe('0.00,50.00 100.00,0.00');
+    expect(r.b).toBe('');
+  });
+
+  it('shares the domain across both series', () => {
+    const a = [{ t: 0, v: 0 }];
+    const b = [{ t: 10, v: 10 }];
+    const r = buildChartPaths(a, b, 100, 100);
+    expect(r.a).toBe('0.00,100.00');
+    expect(r.b).toBe('100.00,0.00');
+  });
+
+  it('maps a single/degenerate point without dividing by zero', () => {
+    const r = buildChartPaths([{ t: 5, v: 5 }], [], 80, 40);
+    expect(r.a).toBe('0.00,40.00');
+  });
+});
+
+describe('comparisonToCsv', () => {
+  it('emits a header and a row per sample tagged A/B', () => {
+    const result = compareTracks(
+      [tp(0, { power: 100 })],
+      [tp(0, { power: 110 })],
+      'power',
+      2
+    );
+    const csv = comparisonToCsv(result, 'power');
+    expect(csv).toBe('series,t_seconds,power\nA,0,100\nB,2,110');
   });
 });

@@ -243,6 +243,29 @@ describe('exportAndShare', () => {
   });
 });
 
+describe('shareTextFile', () => {
+  it('web: downloads the text under the exact filename (no extension forced)', async () => {
+    isNativePlatform.mockReturnValue(false);
+    const download = vi.fn();
+    const svc = new FileService({ download });
+    await svc.shareTextFile('a,b\n1,2', 'compare.csv');
+    expect(download).toHaveBeenCalledWith('a,b\n1,2', 'compare.csv');
+  });
+
+  it('native: writes and shares the text file', async () => {
+    isNativePlatform.mockReturnValue(true);
+    writeFile.mockResolvedValue({});
+    getUri.mockResolvedValue({ uri: 'file:///cache/compare.csv' });
+    share.mockResolvedValue({});
+    const svc = new FileService();
+    await svc.shareTextFile('a,b', 'compare.csv');
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'compare.csv', data: 'a,b' })
+    );
+    expect(share).toHaveBeenCalled();
+  });
+});
+
 describe('native read with Blob data', () => {
   it('reads a Blob result via .text()', async () => {
     isNativePlatform.mockReturnValue(true);

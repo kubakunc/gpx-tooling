@@ -36,6 +36,55 @@ export function extractSeries(points: TrackPoint[], metric: CompareMetric): Samp
   return out;
 }
 
+/**
+ * Build SVG polyline `points` strings for both series scaled into a `width` x
+ * `height` box. X is shared time domain (min→max across both series), Y is the
+ * shared value domain. Returns `''` for an empty series. A flat/degenerate
+ * domain maps to the box centre so a single point still renders.
+ */
+export function buildChartPaths(
+  seriesA: Sample[],
+  seriesB: Sample[],
+  width: number,
+  height: number
+): { a: string; b: string } {
+  const all = [...seriesA, ...seriesB];
+  if (all.length === 0) return { a: '', b: '' };
+
+  let tMin = Infinity, tMax = -Infinity, vMin = Infinity, vMax = -Infinity;
+  for (const s of all) {
+    if (s.t < tMin) tMin = s.t;
+    if (s.t > tMax) tMax = s.t;
+    if (s.v < vMin) vMin = s.v;
+    if (s.v > vMax) vMax = s.v;
+  }
+  const tSpan = tMax - tMin || 1;
+  const vSpan = vMax - vMin || 1;
+
+  const toPath = (series: Sample[]): string =>
+    series
+      .map((s) => {
+        const x = ((s.t - tMin) / tSpan) * width;
+        // Invert Y so larger values sit higher in the SVG box.
+        const y = height - ((s.v - vMin) / vSpan) * height;
+        return `${x.toFixed(2)},${y.toFixed(2)}`;
+      })
+      .join(' ');
+
+  return { a: toPath(seriesA), b: toPath(seriesB) };
+}
+
+/**
+ * Build a CSV of a comparison: a header row plus one row per sample for each
+ * series (tagged A/B). Used by "Save comparison" via the file share.
+ */
+export function comparisonToCsv(result: CompareResult, metric: CompareMetric): string {
+  const lines = [`series,t_seconds,${metric}`];
+  for (const s of result.seriesA) lines.push(`A,${s.t},${s.v}`);
+  for (const s of result.seriesB) lines.push(`B,${s.t},${s.v}`);
+  return lines.join('\n');
+}
+
 function average(series: Sample[]): number | null {
   if (series.length === 0) return null;
   let sum = 0;
