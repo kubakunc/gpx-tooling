@@ -1,10 +1,14 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { get } from 'svelte/store';
-import { AdManager, adManager, realAdDeps, type AdLike } from './AdManager';
+import { AdManager, adManager, realAdDeps, bannerHeight, type AdLike } from './AdManager';
 import { settings } from '$lib/stores/settings';
 // Enums are plain value modules (no native bridge); safe to import in tests.
-import { AdmobConsentStatus, InterstitialAdPluginEvents as InterstitialEvents } from '@capacitor-community/admob';
+import {
+  AdmobConsentStatus,
+  BannerAdPluginEvents as BannerEvents,
+  InterstitialAdPluginEvents as InterstitialEvents
+} from '@capacitor-community/admob';
 
 type Listener = (...args: unknown[]) => void;
 
@@ -70,6 +74,7 @@ function makeClock(start = 0) {
 
 beforeEach(() => {
   settings.set({ consentObtained: false, smoothing: 'medium' });
+  bannerHeight.set(0);
 });
 
 describe('AdManager — web (non-native)', () => {
@@ -153,6 +158,35 @@ describe('AdManager — native init + consent', () => {
     expect(calls.initialize).toHaveLength(1);
   });
 
+  it('does NOT record consent when status stays REQUIRED (declined / no form)', async () => {
+    // Form unavailable and consent still REQUIRED → the flag must stay false,
+    // reflecting the real outcome rather than a hardcoded true.
+    const { fake } = makeFakeAds({
+      requestConsentInfo: vi.fn(async () => ({
+        status: AdmobConsentStatus.REQUIRED,
+        isConsentFormAvailable: false
+      }))
+    });
+    const mgr = new AdManager({ ads: fake, isNative: () => true, now: () => 0 });
+    await mgr.init();
+    expect(get(settings).consentObtained).toBe(false);
+    // The banner still shows — ads are best-effort regardless of the flag.
+    expect(get(mgr.state).bannerShown).toBe(true);
+  });
+
+  it('records consent when the form flow ends OBTAINED', async () => {
+    const { fake } = makeFakeAds({
+      requestConsentInfo: vi.fn(async () => ({
+        status: AdmobConsentStatus.REQUIRED,
+        isConsentFormAvailable: true
+      })),
+      // showConsentForm in the default fake resolves to OBTAINED.
+    });
+    const mgr = new AdManager({ ads: fake, isNative: () => true, now: () => 0 });
+    await mgr.init();
+    expect(get(settings).consentObtained).toBe(true);
+  });
+
   it('never throws when the plugin rejects', async () => {
     const { fake } = makeFakeAds({
       requestConsentInfo: vi.fn(async () => {
@@ -162,6 +196,30 @@ describe('AdManager — native init + consent', () => {
     const mgr = new AdManager({ ads: fake, isNative: () => true, now: () => 0 });
     await expect(mgr.init()).resolves.toBeUndefined();
     expect(get(mgr.state).bannerShown).toBe(false);
+  });
+
+  it('publishes the real banner height on SizeChanged and ignores zero heights', async () => {
+    const { fake, emit } = makeFakeAds();
+    const mgr = new AdManager({ ads: fake, isNative: () => true, now: () => 0 });
+    await mgr.init();
+    expect(get(bannerHeight)).toBe(0);
+    emit(BannerEvents.SizeChanged, { width: 320, height: 0 });
+    expect(get(bannerHeight)).toBe(0); // zero ignored — keep the fallback
+    emit(BannerEvents.SizeChanged, { width: 320, height: 62 });
+    expect(get(bannerHeight)).toBe(62);
+  });
+
+  it('init() still shows the banner when the size listener fails to bind', async () => {
+    const { fake, calls } = makeFakeAds({
+      addListener: vi.fn(async () => {
+        throw new Error('listener boom');
+      })
+    });
+    const mgr = new AdManager({ ads: fake, isNative: () => true, now: () => 0 });
+    await expect(mgr.init()).resolves.toBeUndefined();
+    expect(calls.showBanner).toHaveLength(1);
+    expect(get(mgr.state).bannerShown).toBe(true);
+    expect(get(bannerHeight)).toBe(0);
   });
 
   it('init() is idempotent — does not show two banners', async () => {

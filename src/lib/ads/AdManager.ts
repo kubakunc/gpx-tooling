@@ -4,7 +4,9 @@ import {
   AdmobConsentStatus,
   BannerAdSize,
   BannerAdPosition,
+  BannerAdPluginEvents,
   InterstitialAdPluginEvents,
+  type AdMobBannerSize,
   type AdmobConsentInfo,
   type AdLoadInfo,
   type BannerAdOptions,
@@ -31,10 +33,17 @@ export interface AdLike {
   prepareInterstitial(options: AdOptions): Promise<AdLoadInfo>;
   showInterstitial(): Promise<void>;
   addListener(
-    eventName: InterstitialAdPluginEvents,
+    eventName: InterstitialAdPluginEvents | BannerAdPluginEvents,
     listenerFunc: (...args: never[]) => void
   ): Promise<PluginListenerHandle>;
 }
+
+/**
+ * The measured native adaptive-banner height in CSS px. 0 on web (where we
+ * render a placeholder) and until the banner reports its size on native.
+ * Consumed by AdBanner to reserve the real strip height.
+ */
+export const bannerHeight: Writable<number> = writable(0);
 
 export interface AdManagerDeps {
   ads: AdLike;
@@ -58,6 +67,7 @@ export class AdManager {
 
   private initialized = false;
   private listenersBound = false;
+  private bannerListenerBound = false;
   private preparing = false;
   private ready = false;
   private lastShownMs: number | null = null;
@@ -83,11 +93,12 @@ export class AdManager {
     if (!this.isNative() || this.initialized) return;
     this.initialized = true;
     try {
-      const info = await this.ads.requestConsentInfo();
+      let info = await this.ads.requestConsentInfo();
       if (info.status === AdmobConsentStatus.REQUIRED && info.isConsentFormAvailable) {
-        await this.ads.showConsentForm();
+        info = await this.ads.showConsentForm();
       }
       await this.ads.initialize({ initializeForTesting: true });
+      await this.bindBannerSizeListener();
       await this.ads.showBanner({
         adId: TEST_BANNER_AD_ID,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
@@ -95,11 +106,39 @@ export class AdManager {
         margin: 0,
         isTesting: true
       });
-      setConsent(true);
+      // Persist the truthful consent outcome: OBTAINED or NOT_REQUIRED mean we
+      // may serve personalised/standard ads; a still-REQUIRED status (form
+      // unavailable or declined) leaves consent un-granted. Deliberately set
+      // only after the banner shows so settings reflect a working ad pipeline.
+      const consentResolved =
+        info.status === AdmobConsentStatus.OBTAINED ||
+        info.status === AdmobConsentStatus.NOT_REQUIRED;
+      setConsent(consentResolved);
       this.state.update((s) => ({ ...s, bannerShown: true }));
     } catch {
       // Ads are best-effort; failures must never break the app.
       this.initialized = false;
+    }
+  }
+
+  /**
+   * Listen for the native adaptive banner's device-computed size and publish
+   * its height (px) so the layout can reserve the real strip. Never throws.
+   */
+  private async bindBannerSizeListener(): Promise<void> {
+    if (this.bannerListenerBound) return;
+    this.bannerListenerBound = true;
+    try {
+      await this.ads.addListener(
+        BannerAdPluginEvents.SizeChanged,
+        ((size: AdMobBannerSize) => {
+          if (size && typeof size.height === 'number' && size.height > 0) {
+            bannerHeight.set(size.height);
+          }
+        }) as (...args: never[]) => void
+      );
+    } catch {
+      this.bannerListenerBound = false;
     }
   }
 
@@ -152,11 +191,13 @@ export class AdManager {
    * a successful export — never mid-operation. Never throws.
    */
   async showInterstitialIfReady(onDismissed: () => void): Promise<void> {
-    if (!this.isNative() || !this.ready || !canShow(this.lastShownMs, this.now())) {
+    // Capture the clock once so the cap check and lastShown stamp agree.
+    const t = this.now();
+    if (!this.isNative() || !this.ready || !canShow(this.lastShownMs, t)) {
       onDismissed();
       return;
     }
-    this.lastShownMs = this.now();
+    this.lastShownMs = t;
     this.setReady(false);
     this.pendingDismiss = onDismissed;
     try {

@@ -14,15 +14,16 @@
   import { formatKm, formatDuration, exportName } from '$lib/domain/usecases/format';
   import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
-  import { onMount } from 'svelte';
   import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.trim;
 
   let busy = $state(false);
 
-  // Preload an interstitial while the user edits so it's ready after export.
-  onMount(() => {
+  // Preload an interstitial as soon as the user has files loaded, so it's ready
+  // after export. Reactive (not onMount) to cover the open-empty → import flow;
+  // prepareInterstitial is idempotent, so re-runs are safe.
+  $effect(() => {
     if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
   });
 
@@ -183,7 +184,7 @@
   </div>
 
   {#if activeFile}
-    <div class="flex gap-3 px-6 pb-3 pt-2">
+    <div class="flex gap-3 px-6 pb-5 pt-2">
       <button
         class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
