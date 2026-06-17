@@ -35,6 +35,7 @@ import {
   decodeBase64Bytes,
   isFitName,
   ensureGpxExt,
+  ensureExportExt,
   friendlyImportError
 } from './FileService';
 import { buildFitFixture, type FitFixtureRecord } from '$lib/data/parsing/fit/buildFitFixture';
@@ -83,6 +84,13 @@ describe('pure helpers', () => {
     expect(ensureGpxExt('ride')).toBe('ride.gpx');
     expect(ensureGpxExt('ride.gpx')).toBe('ride.gpx');
     expect(ensureGpxExt('RIDE.GPX')).toBe('RIDE.GPX');
+  });
+
+  it('ensureExportExt keeps known track extensions and defaults to .gpx', () => {
+    expect(ensureExportExt('ride.tcx')).toBe('ride.tcx');
+    expect(ensureExportExt('ride.kml')).toBe('ride.kml');
+    expect(ensureExportExt('ride.gpx')).toBe('ride.gpx');
+    expect(ensureExportExt('ride')).toBe('ride.gpx');
   });
 
   it('friendlyImportError maps ParseError and generic errors', () => {

@@ -29,7 +29,7 @@
       iconSize: 19,
       title: 'Convert',
       subtitle: 'GPX · FIT · TCX · KML',
-      soon: true
+      soon: false
     },
     {
       key: 'elevation',

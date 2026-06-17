@@ -30,6 +30,15 @@ export function ensureGpxExt(name: string): string {
   return /\.gpx$/i.test(name) ? name : `${name}.gpx`;
 }
 
+/**
+ * Ensure an export filename has an extension. If it already has a recognised
+ * track extension (gpx/tcx/kml/fit) it is left as-is; otherwise `.gpx` is
+ * appended as a sensible default.
+ */
+export function ensureExportExt(name: string): string {
+  return /\.(gpx|tcx|kml|fit)$/i.test(name) ? name : `${name}.gpx`;
+}
+
 /** Map any thrown value to a user-friendly message for a toast. */
 export function friendlyImportError(e: unknown): string {
   if (e instanceof ParseError) return `Could not read file: ${e.message}`;
@@ -140,7 +149,7 @@ export class FileService {
    * download (web). Errors are surfaced with friendly messages.
    */
   async exportAndShare(xml: string, filename: string): Promise<void> {
-    const name = ensureGpxExt(filename);
+    const name = ensureExportExt(filename);
     try {
       if (Capacitor.isNativePlatform()) {
         await Filesystem.writeFile({
