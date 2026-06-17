@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toolThemes, relatedApp, type ToolKey } from './toolThemes';
+import { toolThemes, relatedApp, rgba, type ToolKey } from './toolThemes';
 
 const keys: ToolKey[] = ['merge', 'trim', 'convert', 'elevation', 'reduce', 'compare'];
 
@@ -64,6 +64,11 @@ describe('toolThemes', () => {
       subtitle: '#7c83c4',
       button: '#4f46e5'
     });
+  });
+
+  it('derives rgba strings from a tool accent hex', () => {
+    expect(rgba(toolThemes.merge.button, 0.35)).toBe('rgba(5,150,105,0.35)');
+    expect(rgba(toolThemes.compare.icon, 0.08)).toBe('rgba(99,102,241,0.08)');
   });
 
   it('exposes the cyan related-app palette', () => {

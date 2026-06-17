@@ -22,6 +22,18 @@ export const toolThemes: Record<ToolKey, ToolTheme> = {
   compare: { tile: '#eef2ff', icon: '#6366f1', title: '#3730a3', subtitle: '#7c83c4', button: '#4f46e5' }
 };
 
+/**
+ * Build an `rgba(r, g, b, a)` string from a `#rrggbb` hex color.
+ * Used to derive button drop-shadows from a tool's accent so the shadow
+ * tracks the same source color as the button background.
+ */
+export function rgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 export interface RelatedAppTheme {
   tile: string;
   border: string;
