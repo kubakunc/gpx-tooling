@@ -38,7 +38,7 @@
       iconSize: 20,
       title: 'Elevation fix',
       subtitle: 'Fix profile & total gain',
-      soon: true
+      soon: false
     },
     {
       key: 'reduce',
