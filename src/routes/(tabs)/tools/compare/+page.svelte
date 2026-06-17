@@ -10,9 +10,12 @@
     compareTracks,
     buildChartPaths,
     comparisonToCsv,
-    type CompareMetric
+    extractSeries,
+    type CompareMetric,
+    type CompareResult
   } from '$lib/domain/usecases/compare';
   import { formatDuration } from '$lib/domain/usecases/format';
+  import { debounce } from '$lib/util/debounce';
 
   const t = toolThemes.compare;
   const AMBER = '#f59e0b';
@@ -45,11 +48,47 @@
   let fileB = $derived($loadedFiles.find((f) => f.id === idB) ?? null);
   let ready = $derived($loadedFiles.length >= 2 && !!fileA && !!fileB);
 
-  let result = $derived(
-    fileA && fileB
-      ? compareTracks(fileA.points, fileB.points, metric, shiftSeconds)
-      : { seriesA: [], seriesB: [], avgA: null, avgB: null, diffPercent: null }
+  const EMPTY_RESULT: CompareResult = {
+    seriesA: [],
+    seriesB: [],
+    avgA: null,
+    avgB: null,
+    diffPercent: null,
+    valueMin: null,
+    valueMax: null
+  };
+
+  // Disable metric tabs that NEITHER track has any data for. Detect by checking
+  // whether either track yields a non-empty series for the metric.
+  let metricHasData = $derived(
+    COMPARE_METRICS.map(
+      (m) =>
+        (fileA ? extractSeries(fileA.points, m).length : 0) > 0 ||
+        (fileB ? extractSeries(fileB.points, m).length : 0) > 0
+    )
   );
+
+  // If the selected metric tab has no data in either track but another does,
+  // move to the first metric that has data so we never sit on a disabled tab.
+  $effect(() => {
+    if (metricHasData.some((d) => d) && !metricHasData[metricIndex]) {
+      const next = metricHasData.findIndex((d) => d);
+      if (next >= 0) metricIndex = next;
+    }
+  });
+
+  // Compare recomputes can be heavy for large tracks, and the shift slider fires
+  // a tick per pixel. Debounce the recompute (same pattern as Reduce/Elevation)
+  // so dragging the shift doesn't jank.
+  let result = $state<CompareResult>(EMPTY_RESULT);
+  function recompute(a: typeof fileA, b: typeof fileB, m: CompareMetric, shift: number) {
+    result = a && b ? compareTracks(a.points, b.points, m, shift) : EMPTY_RESULT;
+  }
+  const debouncedRecompute = debounce(recompute, 120);
+  $effect(() => {
+    debouncedRecompute(fileA, fileB, metric, shiftSeconds);
+  });
+
   let hasData = $derived(result.seriesA.length > 0 || result.seriesB.length > 0);
   let paths = $derived(buildChartPaths(result.seriesA, result.seriesB, 340, 130));
 
@@ -62,6 +101,16 @@
   );
 
   const unit = $derived(metricUnit[metric]);
+  function fmtAxis(v: number | null): string {
+    return v === null ? '—' : `${Math.round(v)} ${unit}`;
+  }
+
+  // Truncate a file name for the inline chart legend.
+  function legendName(name: string | undefined): string {
+    if (!name) return '—';
+    const base = name.replace(/\.[^.]+$/, '');
+    return base.length > 16 ? `${base.slice(0, 15)}…` : base;
+  }
   function fmtAvg(v: number | null): string {
     return v === null ? '—' : `${Math.round(v)} ${unit}`;
   }
@@ -69,6 +118,10 @@
     result.diffPercent === null
       ? '—'
       : `${result.diffPercent >= 0 ? '+' : ''}${result.diffPercent.toFixed(1)}%`
+  );
+
+  let exportFilename = $derived(
+    `${(fileA?.name ?? 'a').replace(/\.[^.]+$/, '')}-vs-${(fileB?.name ?? 'b').replace(/\.[^.]+$/, '')}-${metric}.csv`
   );
 
   function adjustShift(delta: number) {
@@ -85,8 +138,7 @@
     busy = true;
     try {
       const csv = comparisonToCsv(result, metric);
-      const base = `${(fileA?.name ?? 'a').replace(/\.[^.]+$/, '')}-vs-${(fileB?.name ?? 'b').replace(/\.[^.]+$/, '')}`;
-      await fileService.shareTextFile(csv, `${base}-${metric}.csv`);
+      await fileService.shareTextFile(csv, exportFilename);
       showToast('Comparison exported', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
@@ -143,10 +195,13 @@
           <button
             type="button"
             class="flex-1 rounded-[12px] text-center text-[13px]"
+            class:cursor-not-allowed={!metricHasData[i]}
+            class:opacity-50={!metricHasData[i] && i !== metricIndex}
             style="padding-top:{i === metricIndex ? 10 : 9}px;padding-bottom:{i === metricIndex ? 10 : 9}px;{i === metricIndex
               ? `background:${t.icon};color:#fff;font-weight:800;`
               : 'background:#fff;color:#6b7077;font-weight:700;border:1px solid #efece6;'}"
             aria-pressed={i === metricIndex}
+            disabled={!metricHasData[i]}
             onclick={() => (metricIndex = i)}
           >
             {metricLabels[m]}
@@ -155,20 +210,41 @@
       </div>
 
       <div
-        class="mx-6 mt-[14px] rounded-[20px] border bg-white px-[14px] pb-[10px] pt-[14px]"
+        class="mx-6 mt-[14px] rounded-[20px] border bg-white px-[14px] pb-[10px] pt-[12px]"
         style="border-color:#ece9f6;box-shadow:0 8px 22px {rgba(t.icon, 0.08)};"
       >
+        <!-- Legend: which polyline is which track. A = indigo accent, B = amber. -->
+        <div class="mb-[10px] flex items-center gap-4 text-[11px] font-bold">
+          <div class="flex min-w-0 items-center gap-[6px]" style="color:{t.title};">
+            <span class="inline-block h-[3px] w-[14px] shrink-0 rounded-[2px]" style="background:{t.icon};"></span>
+            <span class="truncate">{legendName(fileA?.name)}</span>
+          </div>
+          <div class="flex min-w-0 items-center gap-[6px]" style="color:#92400e;">
+            <span class="inline-block h-[3px] w-[14px] shrink-0 rounded-[2px]" style="background:{AMBER};"></span>
+            <span class="truncate">{legendName(fileB?.name)}</span>
+          </div>
+        </div>
         {#if hasData}
-          <svg viewBox="0 0 340 130" width="100%" height="130" preserveAspectRatio="none" class="block">
-            <g stroke="#f1eff8" stroke-width="1"><path d="M0,32 H340 M0,64 H340 M0,96 H340" /></g>
-            {#if paths.a}
-              <polyline points={paths.a} fill="none" stroke={t.icon} stroke-width="2.6" />
-            {/if}
-            {#if paths.b}
-              <polyline points={paths.b} fill="none" stroke={AMBER} stroke-width="2.6" />
-            {/if}
-          </svg>
-          <div class="flex justify-between px-[2px] text-[10px] font-semibold" style="color:#a8a29e;">
+          <div class="flex gap-[6px]">
+            <!-- Y-axis value scale: max at top, min at bottom, with metric unit. -->
+            <div
+              class="flex w-[42px] shrink-0 flex-col justify-between py-[1px] text-right text-[9px] font-semibold"
+              style="color:#a8a29e;"
+            >
+              <span>{fmtAxis(result.valueMax)}</span>
+              <span>{fmtAxis(result.valueMin)}</span>
+            </div>
+            <svg viewBox="0 0 340 130" width="100%" height="130" preserveAspectRatio="none" class="block flex-1">
+              <g stroke="#f1eff8" stroke-width="1"><path d="M0,32 H340 M0,64 H340 M0,96 H340" /></g>
+              {#if paths.a}
+                <polyline points={paths.a} fill="none" stroke={t.icon} stroke-width="2.6" />
+              {/if}
+              {#if paths.b}
+                <polyline points={paths.b} fill="none" stroke={AMBER} stroke-width="2.6" />
+              {/if}
+            </svg>
+          </div>
+          <div class="flex justify-between pl-[48px] pr-[2px] text-[10px] font-semibold" style="color:#a8a29e;">
             <span>00:00</span><span>{formatDuration(timeMax)}</span>
           </div>
         {:else}
@@ -234,25 +310,32 @@
   </div>
 
   {#if ready}
-    <div class="flex gap-3 px-6 pb-3 pt-2">
-      <button
-        type="button"
-        onclick={saveComparison}
-        disabled={busy || !hasData}
-        class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
-        style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
-      >
-        {#if busy}<Spinner /> Saving…{:else}Save comparison{/if}
-      </button>
-      <button
-        type="button"
-        onclick={reset}
-        class="h-[56px] w-[56px] rounded-[20px] text-[18px]"
-        style="background:{t.tile};color:{t.button};"
-        aria-label="Reset"
-      >
-        ↺
-      </button>
+    <div class="px-6 pb-3 pt-2">
+      {#if hasData}
+        <div class="mb-[8px] text-center text-[12px]" style="color:{t.subtitle};">
+          Saves as: <span class="font-bold">{exportFilename}</span>
+        </div>
+      {/if}
+      <div class="flex gap-3">
+        <button
+          type="button"
+          onclick={saveComparison}
+          disabled={busy || !hasData}
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
+          style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
+        >
+          {#if busy}<Spinner /> Saving…{:else}Export CSV{/if}
+        </button>
+        <button
+          type="button"
+          onclick={reset}
+          class="h-[56px] w-[56px] rounded-[20px] text-[18px]"
+          style="background:{t.tile};color:{t.button};"
+          aria-label="Reset"
+        >
+          ↺
+        </button>
+      </div>
     </div>
   {/if}
 </div>

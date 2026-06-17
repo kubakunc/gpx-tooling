@@ -48,6 +48,14 @@
   }
   const debouncedRecompute = debounce(recompute, 150);
   $effect(() => {
+    // Don't flash a spinner when there's nothing to compute (no file / no
+    // points). Mirror Reduce's graceful empty handling: clear state, no spinner.
+    if (points.length === 0) {
+      debouncedRecompute.cancel();
+      corrected = [];
+      calculating = false;
+      return;
+    }
     calculating = true;
     debouncedRecompute(points, level);
   });
