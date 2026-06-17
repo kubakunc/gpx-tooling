@@ -27,6 +27,20 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Derive an export filename from a source name.
+ *   exportName('morning.gpx', 'trimmed')      → 'morning-trimmed.gpx'
+ *   exportName('ride.track.GPX', 'reduced')   → 'ride.track-reduced.gpx'
+ *   exportName('', 'merged')                  → 'merged.gpx'
+ * Strips a trailing `.gpx` (case-insensitive) from the source, then appends
+ * `-{suffix}.{ext}`. Falls back to `{suffix}.{ext}` when source is empty.
+ */
+export function exportName(sourceName: string, suffix: string, ext = 'gpx'): string {
+  const base = sourceName.replace(/\.gpx$/i, '').trim();
+  if (!base) return `${suffix}.${ext}`;
+  return `${base}-${suffix}.${ext}`;
+}
+
 /** Integer → grouped with thin spaces, e.g. 8412 → "8 412". */
 export function formatCount(n: number): string {
   return Math.round(n)

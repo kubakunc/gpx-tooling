@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { percentToEpsilon, elevationProfilePoints, MAX_EPS } from './reduceMapping';
+import {
+  percentToEpsilon,
+  elevationProfilePoints,
+  simplificationLabel,
+  MAX_EPS
+} from './reduceMapping';
 import type { TrackPoint } from '../entities/TrackPoint';
 
 const tp = (ele: number | null): TrackPoint => ({
@@ -23,6 +28,23 @@ describe('percentToEpsilon', () => {
   it('clamps out-of-range percentages', () => {
     expect(percentToEpsilon(-50)).toBe(MAX_EPS);
     expect(percentToEpsilon(150)).toBe(0);
+  });
+});
+
+describe('simplificationLabel', () => {
+  it('maps thresholds <34 Low, <67 Medium, else High', () => {
+    expect(simplificationLabel(0)).toBe('Low');
+    expect(simplificationLabel(33)).toBe('Low');
+    expect(simplificationLabel(34)).toBe('Medium');
+    expect(simplificationLabel(50)).toBe('Medium');
+    expect(simplificationLabel(66)).toBe('Medium');
+    expect(simplificationLabel(67)).toBe('High');
+    expect(simplificationLabel(100)).toBe('High');
+  });
+
+  it('clamps out-of-range percentages', () => {
+    expect(simplificationLabel(-20)).toBe('Low');
+    expect(simplificationLabel(250)).toBe('High');
   });
 });
 

@@ -2,13 +2,15 @@
   import ToolHeader from '$lib/components/ToolHeader.svelte';
   import RouteMap from '$lib/components/RouteMap.svelte';
   import MapBadge from '$lib/components/MapBadge.svelte';
+  import Spinner from '$lib/components/Spinner.svelte';
   import { toolThemes, rgba } from '$lib/toolThemes';
+  import type { LoadedFile } from '$lib/stores/loadedFiles';
   import { loadedFiles, addFiles, removeFile, reorderFiles } from '$lib/stores/loadedFiles';
   import { fileService } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { mergeChronologically } from '$lib/domain/usecases/merge';
   import { totalDistanceMeters, elevationGainMeters, durationSeconds } from '$lib/domain/usecases/stats';
-  import { formatKm, formatGain, formatDuration } from '$lib/domain/usecases/format';
+  import { formatKm, formatGain, formatDuration, exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
 
   const t = toolThemes.merge;
@@ -40,11 +42,12 @@
   }
 
   async function mergeAndExport() {
-    if (busy || $loadedFiles.length === 0) return;
+    if (busy || $loadedFiles.length < 2) return;
     busy = true;
     try {
       const xml = serializeGpx(merged, 'merged');
-      await fileService.exportAndShare(xml, 'merged.gpx');
+      const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
+      await fileService.exportAndShare(xml, name);
       showToast('Merged file exported', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
@@ -55,6 +58,13 @@
 
   function fileMeta(points: typeof merged): string {
     return `${formatKm(totalDistanceMeters(points))} · ${formatGain(elevationGainMeters(points))} · ${formatDuration(durationSeconds(points))}`;
+  }
+
+  // Toast has no action support, so confirm the removal with a plain toast
+  // rather than building an undo affordance the component can't render.
+  function removeWithToast(f: LoadedFile) {
+    removeFile(f.id);
+    showToast(`Removed ${f.name}`, 'info');
   }
 </script>
 
@@ -70,12 +80,12 @@
         </p>
         <button
           type="button"
-          class="mt-6 h-[52px] rounded-[18px] px-7 text-[15px] font-extrabold text-white"
+          class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}
           onclick={importMore}
         >
-          Import GPX files
+          {#if busy}<Spinner /> Working…{:else}Import GPX files{/if}
         </button>
       </div>
     {:else}
@@ -128,33 +138,35 @@
               <div class="truncate text-[15px] font-bold text-ink">{f.name}</div>
               <div class="text-[12px]" style="color:#8a9099;">{fileMeta(f.points)}</div>
             </div>
-            <div class="flex items-center gap-1">
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1">
+                <button
+                  type="button"
+                  class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
+                  style="background:#f1f3f0;color:{t.button};"
+                  aria-label="Move up"
+                  disabled={i === 0}
+                  onclick={() => reorderFiles(i, i - 1)}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
+                  style="background:#f1f3f0;color:{t.button};"
+                  aria-label="Move down"
+                  disabled={i === $loadedFiles.length - 1}
+                  onclick={() => reorderFiles(i, i + 1)}
+                >
+                  ↓
+                </button>
+              </div>
               <button
                 type="button"
-                class="flex h-7 w-7 items-center justify-center rounded-[8px] text-[14px]"
-                style="background:#f1f3f0;color:{t.button};"
-                aria-label="Move up"
-                disabled={i === 0}
-                onclick={() => reorderFiles(i, i - 1)}
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                class="flex h-7 w-7 items-center justify-center rounded-[8px] text-[14px]"
-                style="background:#f1f3f0;color:{t.button};"
-                aria-label="Move down"
-                disabled={i === $loadedFiles.length - 1}
-                onclick={() => reorderFiles(i, i + 1)}
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                class="flex h-7 w-7 items-center justify-center rounded-[8px] text-[14px]"
+                class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
                 style="background:#fef2f2;color:#e11d48;"
                 aria-label="Remove file"
-                onclick={() => removeFile(f.id)}
+                onclick={() => removeWithToast(f)}
               >
                 ✕
               </button>
@@ -162,18 +174,27 @@
           </div>
         {/each}
       </div>
+
+      <div class="px-6 pb-4 text-[12px] leading-[1.5]" style="color:#8a9099;">
+        Files are stitched together by timestamp.
+      </div>
     {/if}
   </div>
 
   {#if $loadedFiles.length > 0}
     <div class="px-6 pb-3 pt-2">
+      {#if $loadedFiles.length < 2}
+        <div class="pb-[10px] text-center text-[12px] font-semibold" style="color:#8a9099;">
+          Add another file to merge.
+        </div>
+      {/if}
       <button
-        class="h-[56px] w-full rounded-[20px] text-[16px] font-extrabold text-white"
+        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
-        disabled={busy}
+        disabled={busy || $loadedFiles.length < 2}
         onclick={mergeAndExport}
       >
-        Merge &amp; export
+        {#if busy}<Spinner /> Working…{:else}Merge &amp; export{/if}
       </button>
     </div>
   {/if}

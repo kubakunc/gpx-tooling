@@ -2,6 +2,8 @@
   import ToolHeader from '$lib/components/ToolHeader.svelte';
   import RouteMap from '$lib/components/RouteMap.svelte';
   import MapBadge from '$lib/components/MapBadge.svelte';
+  import Spinner from '$lib/components/Spinner.svelte';
+  import ActiveFileSelector from '$lib/components/ActiveFileSelector.svelte';
   import { toolThemes, rgba } from '$lib/toolThemes';
   import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
   import { editSession, setFileId, setStartRatio, setEndRatio, resetEditSession } from '$lib/stores/editSession';
@@ -9,7 +11,7 @@
   import { showToast } from '$lib/stores/toast';
   import { trimGpx } from '$lib/domain/usecases/trim';
   import { totalDistanceMeters, durationSeconds } from '$lib/domain/usecases/stats';
-  import { formatKm, formatDuration } from '$lib/domain/usecases/format';
+  import { formatKm, formatDuration, exportName } from '$lib/domain/usecases/format';
   import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
 
@@ -72,7 +74,8 @@
     busy = true;
     try {
       const xml = serializeGpx(kept, 'trimmed');
-      await fileService.exportAndShare(xml, 'trimmed.gpx');
+      const name = exportName(activeFile.name, 'trimmed');
+      await fileService.exportAndShare(xml, name);
       showToast('Trimmed file exported', 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
@@ -94,22 +97,22 @@
         </p>
         <button
           type="button"
-          class="mt-6 h-[52px] rounded-[18px] px-7 text-[15px] font-extrabold text-white"
+          class="mt-6 flex h-[52px] items-center justify-center gap-2 rounded-[18px] px-7 text-[15px] font-extrabold text-white"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
           disabled={busy}
           onclick={importFile}
         >
-          Import GPX file
+          {#if busy}<Spinner /> Working…{:else}Import GPX file{/if}
         </button>
       </div>
     {:else}
-      <div
-        class="mx-6 mt-[6px] inline-flex items-center gap-[9px] rounded-[12px] px-[14px] py-[9px]"
-        style="background:{t.tile};"
-      >
-        <div class="h-5 w-2 rounded-[4px]" style="background:{t.icon};"></div>
-        <div class="text-[14px] font-bold" style="color:{t.title};">{activeFile.name}</div>
-      </div>
+      <ActiveFileSelector
+        files={$loadedFiles}
+        active={activeFile}
+        tile={t.tile}
+        accent={t.icon}
+        title={t.title}
+      />
 
       <div
         class="relative mx-6 mt-3 h-[150px] overflow-hidden rounded-[20px] border"
@@ -155,15 +158,15 @@
 
         <div class="mt-[10px] flex items-center justify-between">
           <div class="rounded-[11px] px-[11px] py-[7px]" style="background:{t.tile};">
-            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Start</div>
+            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">From</div>
             <div class="text-[15px] font-extrabold" style="color:{t.title};">{startTime}</div>
           </div>
           <div class="text-center">
-            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Kept</div>
+            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">Keep</div>
             <div class="text-[15px] font-extrabold" style="color:{t.button};">{keptLabel}</div>
           </div>
           <div class="rounded-[11px] px-[11px] py-[7px] text-right" style="background:{t.tile};">
-            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">End</div>
+            <div class="text-[9px] font-bold uppercase tracking-[0.08em]" style="color:{t.subtitle};">To</div>
             <div class="text-[15px] font-extrabold" style="color:{t.title};">{endTime}</div>
           </div>
         </div>
@@ -174,12 +177,12 @@
   {#if activeFile}
     <div class="flex gap-3 px-6 pb-3 pt-2">
       <button
-        class="h-[56px] flex-1 rounded-[20px] text-[16px] font-extrabold text-white"
+        class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
         disabled={busy || kept.length < 2}
         onclick={trimAndSave}
       >
-        Trim &amp; save
+        {#if busy}<Spinner /> Working…{:else}Trim &amp; save{/if}
       </button>
       <button
         class="h-[56px] w-[56px] rounded-[20px] text-[18px]"

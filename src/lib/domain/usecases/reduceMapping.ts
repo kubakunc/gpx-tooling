@@ -14,6 +14,18 @@ export function percentToEpsilon(percent: number): number {
 }
 
 /**
+ * Outcome-framed label for a "detail kept" slider percentage (0–100).
+ * Thresholds: <34 → 'Low', <67 → 'Medium', else → 'High'.
+ * (Input is clamped to [0,100] first.)
+ */
+export function simplificationLabel(percent: number): 'Low' | 'Medium' | 'High' {
+  const p = Math.min(100, Math.max(0, percent));
+  if (p < 34) return 'Low';
+  if (p < 67) return 'Medium';
+  return 'High';
+}
+
+/**
  * Build an SVG polyline `points` attribute from track elevations, normalised
  * into a [0,width] × [0,height] box (y inverted so higher elevation is up).
  * Returns '' for tracks with no usable elevation.
