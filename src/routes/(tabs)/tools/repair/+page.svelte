@@ -32,11 +32,36 @@
   );
   let points = $derived(activeFile?.points ?? []);
   let result = $derived(repairTrack(points, { strength }));
-  let route = $derived(result.points.map((p) => ({ lat: p.latitude, lon: p.longitude })));
+  // Original (faint) vs cleaned overlay, like Reduce's original/simplified.
+  let originalCoords = $derived(points.map((p) => ({ lat: p.latitude, lon: p.longitude })));
+  let cleanedCoords = $derived(result.points.map((p) => ({ lat: p.latitude, lon: p.longitude })));
 
-  let reportLine = $derived(
-    `${formatCount(result.report.spikes)} spikes · ${formatCount(result.report.invalid)} invalid · ` +
-      `${formatCount(result.report.duplicates)} duplicates · ${formatCount(result.report.elevationFixed)} elevations fixed`
+  // Qualitative helper that changes with the selected strength. Aggressive is a
+  // warning because it moves the recorded coordinates.
+  let strengthHelp = $derived(
+    strength === 'conservative'
+      ? 'Removes only clearly-impossible GPS jumps.'
+      : strength === 'balanced'
+        ? 'Removes GPS jumps and fixes elevation spikes.'
+        : 'Also smooths GPS jitter — this moves your recorded coordinates.'
+  );
+
+  // Friendly report: lead with a total, then a per-category breakdown. Elevation
+  // repair doesn't run under Conservative, so hide that (misleading) 0 stat.
+  let showElevation = $derived(strength !== 'conservative');
+  let totalFixed = $derived(
+    result.report.spikes +
+      result.report.invalid +
+      result.report.duplicates +
+      (showElevation ? result.report.elevationFixed : 0)
+  );
+  let reportBreakdown = $derived(
+    [
+      `${formatCount(result.report.spikes)} spikes`,
+      `${formatCount(result.report.invalid)} invalid`,
+      `${formatCount(result.report.duplicates)} duplicates`,
+      ...(showElevation ? [`${formatCount(result.report.elevationFixed)} elevations fixed`] : [])
+    ].join(' · ')
   );
 
   async function importFile() {
@@ -122,9 +147,27 @@
         class="relative mx-6 mt-3 h-[340px] overflow-hidden rounded-[20px] border"
         style="background:#f6e9ec;border-color:#f4d4db;"
       >
-        <RouteMap variant="merge" {route} zoomPosition="bottomleft" />
+        <RouteMap
+          variant="reduce"
+          route={originalCoords}
+          simplified={cleanedCoords}
+          zoomPosition="bottomleft"
+        />
         <MapBadge position="left-3 top-3" extraClass="text-[11px] font-extrabold">
           <span style="color:{t.title};">Cleaned route</span>
+        </MapBadge>
+        <MapBadge
+          position="bottom-[10px] left-3"
+          extraClass="flex items-center gap-[10px] text-[11px] font-bold"
+        >
+          <span class="flex items-center gap-[5px]" style="color:#9a8fc0;">
+            <span class="inline-block h-[3px] w-3 rounded-[2px]" style="background:#cdbfe8;"></span
+            >original
+          </span>
+          <span class="flex items-center gap-[5px]" style="color:{t.title};">
+            <span class="inline-block h-[3px] w-3 rounded-[2px]" style="background:{t.icon};"></span
+            >cleaned
+          </span>
         </MapBadge>
       </div>
 
@@ -155,6 +198,24 @@
             </button>
           {/each}
         </div>
+        {#if strength === 'aggressive'}
+          <div
+            data-testid="repair-strength-help"
+            class="mt-2 flex items-start gap-2 rounded-[12px] border px-3 py-2 text-[12px] font-semibold leading-[1.45]"
+            style="border-color:#fcd9c0;background:#fff4ec;color:#b45309;"
+          >
+            <span aria-hidden="true">⚠</span>
+            <span>{strengthHelp}</span>
+          </div>
+        {:else}
+          <p
+            data-testid="repair-strength-help"
+            class="mt-2 text-[12px] leading-[1.45]"
+            style="color:{t.subtitle};"
+          >
+            {strengthHelp}
+          </p>
+        {/if}
       </div>
 
       <!-- Report -->
@@ -166,11 +227,21 @@
           Cleaned
         </div>
         <div data-testid="repair-report" class="mt-[2px] text-[14px] font-bold" style="color:{t.title};">
-          {reportLine}
+          {#if totalFixed === 0}
+            Looks clean — no problems found.
+          {:else}
+            Cleaned {formatCount(totalFixed)} issue{totalFixed === 1 ? '' : 's'}
+            <div class="mt-[2px] text-[12px] font-semibold" style="color:#9aa0a6;">
+              {reportBreakdown}
+            </div>
+          {/if}
         </div>
         <div class="mt-1 text-[12px]" style="color:#9aa0a6;">
           {formatCount(points.length)} → {formatCount(result.points.length)} points
         </div>
+        <p data-testid="repair-reassurance" class="mt-2 text-[12px]" style="color:#9aa0a6;">
+          Your original file is unchanged.
+        </p>
       </div>
     {/if}
   </div>

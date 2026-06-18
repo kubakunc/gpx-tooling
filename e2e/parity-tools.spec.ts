@@ -32,9 +32,12 @@ test.describe('parity tools', () => {
     const size = page.getByTestId('strip-size');
     await expect(size).toContainText('→');
     const before = await size.textContent();
-    // Strip elevation too — the after-size should drop further.
+    // Toggles default OFF, so export is disabled until one is turned on.
+    await expect(page.getByTestId('strip-export')).toBeDisabled();
+    // Turn elevation stripping on — the after-size should drop and export enables.
     await page.getByTestId('strip-toggle-elevation').click();
     await expect(size).not.toHaveText(before ?? '');
+    await expect(page.getByTestId('strip-export')).toBeEnabled();
 
     const downloadPromise = page.waitForEvent('download');
     await page.getByTestId('strip-export').click();
@@ -65,13 +68,17 @@ test.describe('parity tools', () => {
     await importViaPicker(page, () => page.getByTestId('import-button').click(), 'ride-a.gpx');
 
     await expect(page.getByText('Cleaned route')).toBeVisible();
-    await expect(page.getByTestId('repair-report')).toContainText('spikes');
-    // Balanced is the default; switch to Aggressive.
+    // Clean fixture → friendly "looks clean" report.
+    await expect(page.getByTestId('repair-report')).toContainText('Looks clean');
+    // Balanced is the default; its helper explains what it does.
+    await expect(page.getByTestId('repair-strength-help')).toContainText('elevation spikes');
+    // Switch to Aggressive — the helper becomes a destructive-action warning.
     await page.getByTestId('repair-strength-aggressive').click();
     await expect(page.getByTestId('repair-strength-aggressive')).toHaveAttribute(
       'aria-pressed',
       'true'
     );
+    await expect(page.getByTestId('repair-strength-help')).toContainText('moves your recorded');
 
     const downloadPromise = page.waitForEvent('download');
     await page.getByTestId('repair-export').click();
