@@ -3,7 +3,8 @@ import {
   shiftPoints,
   fileStartMs,
   fileEndMs,
-  detectTimeOverlaps
+  detectTimeOverlaps,
+  dedupePoints
 } from './mergeEngine';
 import type { TrackPoint } from '../entities/TrackPoint';
 
@@ -49,5 +50,36 @@ describe('detectTimeOverlaps', () => {
     const b = [tp(3, '2026-01-01T00:11:00Z')];
     expect(detectTimeOverlaps([a, b])).toEqual([]);
     expect(detectTimeOverlaps([[tp(1, null)], [tp(2, null)]])).toEqual([]);
+  });
+});
+
+describe('dedupePoints', () => {
+  it('drops a point with the same timestamp as its predecessor', () => {
+    const pts = [
+      tp(1, '2026-01-01T00:00:00Z'),
+      tp(1, '2026-01-01T00:00:00Z'),
+      tp(2, '2026-01-01T00:00:01Z')
+    ];
+    const { points, removed } = dedupePoints(pts);
+    expect(points).toHaveLength(2);
+    expect(removed).toBe(1);
+  });
+  it('drops a near-coincident untimed point (<0.5m)', () => {
+    const a = { latitude: 50.0, longitude: 19.0, elevation: null, time: null, sensors: {} };
+    const { points, removed } = dedupePoints([
+      a,
+      { ...a },
+      { latitude: 50.001, longitude: 19.0, elevation: null, time: null, sensors: {} }
+    ]);
+    expect(points).toHaveLength(2);
+    expect(removed).toBe(1);
+  });
+  it('keeps distinct points', () => {
+    expect(
+      dedupePoints([tp(1, '2026-01-01T00:00:00Z'), tp(2, '2026-01-01T00:00:01Z')]).removed
+    ).toBe(0);
+  });
+  it('handles an empty input', () => {
+    expect(dedupePoints([])).toEqual({ points: [], removed: 0 });
   });
 });

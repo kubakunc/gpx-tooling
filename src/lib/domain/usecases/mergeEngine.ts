@@ -95,3 +95,25 @@ export function detectTimeOverlaps(files: TrackPoint[][]): MergeIssue[] {
   });
   return issues;
 }
+
+export function dedupePoints(points: TrackPoint[]): { points: TrackPoint[]; removed: number } {
+  if (points.length === 0) return { points: [], removed: 0 };
+  const out: TrackPoint[] = [points[0]];
+  let removed = 0;
+  for (let i = 1; i < points.length; i++) {
+    const prev = out[out.length - 1];
+    const cur = points[i];
+    const sameTime =
+      prev.time !== null && cur.time !== null && prev.time.getTime() === cur.time.getTime();
+    const dist = haversineMeters(prev.latitude, prev.longitude, cur.latitude, cur.longitude);
+    const dt =
+      prev.time && cur.time ? Math.abs(cur.time.getTime() - prev.time.getTime()) / 1000 : null;
+    const coincident = dist < 0.5 && (dt === null || dt < 1);
+    if (sameTime || coincident) {
+      removed++;
+      continue;
+    }
+    out.push(cur);
+  }
+  return { points: out, removed };
+}
