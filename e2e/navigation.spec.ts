@@ -39,15 +39,14 @@ test.describe('navigation', () => {
     }
   });
 
-  test('bottom nav switches between Menu, Files and Settings', async ({ page }) => {
+  test('bottom nav switches between Menu and Files', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('nav-files').click();
     await expect(page).toHaveURL(/\/files$/);
     await expect(page.getByRole('heading', { name: 'Files' })).toBeVisible();
 
-    await page.getByTestId('nav-settings').click();
-    await expect(page).toHaveURL(/\/settings$/);
-    await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    // Settings has been removed: there is no settings nav item.
+    await expect(page.getByTestId('nav-settings')).toHaveCount(0);
 
     await page.getByTestId('nav-menu').click();
     await expect(page).toHaveURL(/\/$/);
@@ -55,7 +54,7 @@ test.describe('navigation', () => {
 
   test('no real console errors across every screen', async ({ page }) => {
     const getErrors = trackConsoleErrors(page);
-    const routes = ['/', '/files', '/settings', ...TILES.map((t) => t.path)];
+    const routes = ['/', '/files', ...TILES.map((t) => t.path)];
     for (const route of routes) {
       await page.goto(route);
       await expect(page.locator('main')).toBeVisible();

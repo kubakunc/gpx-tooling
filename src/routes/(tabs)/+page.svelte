@@ -1,14 +1,11 @@
 <script lang="ts">
   import ToolTile from '$lib/components/ToolTile.svelte';
   import { toolThemes, relatedApp } from '$lib/toolThemes';
-  import { showToast } from '$lib/stores/toast';
 
   const tiles = [
     {
       key: 'merge',
       href: '/tools/merge',
-      icon: '⤬',
-      iconSize: 20,
       title: 'Merge files',
       subtitle: 'Combine into one track',
       soon: false
@@ -16,8 +13,6 @@
     {
       key: 'trim',
       href: '/tools/trim',
-      icon: '✂',
-      iconSize: 20,
       title: 'Trim track',
       subtitle: 'Cut range on the map',
       soon: false
@@ -25,8 +20,6 @@
     {
       key: 'convert',
       href: '/tools/convert',
-      icon: '⇄',
-      iconSize: 19,
       title: 'Convert',
       subtitle: 'GPX · FIT · TCX · KML',
       soon: false
@@ -34,8 +27,6 @@
     {
       key: 'elevation',
       href: '/tools/elevation',
-      icon: '⛰',
-      iconSize: 20,
       title: 'Elevation fix',
       subtitle: 'Fix profile & total gain',
       soon: false
@@ -43,8 +34,6 @@
     {
       key: 'reduce',
       href: '/tools/reduce',
-      icon: '⊚',
-      iconSize: 19,
       title: 'Reduce points',
       subtitle: 'Shrink file size',
       soon: false
@@ -52,29 +41,23 @@
     {
       key: 'compare',
       href: '/tools/compare',
-      icon: '≈',
-      iconSize: 21,
       title: 'Compare tracks',
       subtitle: 'Chart two files together',
       soon: false
     }
   ] as const;
 
-  function stravaTeaser() {
-    showToast('Strava & Komoot import is coming soon', 'info');
+  const STRAVA_EXPORTER_URL =
+    'https://play.google.com/store/apps/details?id=com.velologiclabs.gpxexporter';
+
+  function openStravaExporter() {
+    window.open(STRAVA_EXPORTER_URL, '_blank');
   }
 </script>
 
-<div class="flex items-center justify-between px-6 pb-2 pt-[18px]">
-  <div>
-    <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Suite</div>
-    <h1 class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Tools</h1>
-  </div>
-  <div
-    class="flex h-[46px] w-[46px] items-center justify-center rounded-[14px] bg-ink text-[16px] font-extrabold text-white"
-  >
-    GP
-  </div>
+<div class="px-6 pb-2 pt-[18px]">
+  <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Suite</div>
+  <h1 class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Tools</h1>
 </div>
 
 <div class="grid grid-cols-2 gap-[11px] px-6 pt-[6px]">
@@ -82,10 +65,7 @@
     {@const theme = toolThemes[t.key]}
     <ToolTile
       href={t.href}
-      icon={t.icon}
-      iconSize={t.iconSize}
       tile={theme.tile}
-      iconBg={theme.icon}
       title={t.title}
       titleColor={theme.title}
       subtitle={t.subtitle}
@@ -102,7 +82,7 @@
   </div>
   <button
     type="button"
-    onclick={stravaTeaser}
+    onclick={openStravaExporter}
     class="flex w-full items-center gap-[14px] rounded-[18px] border p-[14px] text-left"
     style="background:{relatedApp.tile};border-color:{relatedApp.border};"
   >
@@ -117,14 +97,15 @@
         Export from Strava &amp; Komoot
       </div>
       <div class="text-[11px]" style="color:{relatedApp.subtitle};">
-        Pull GPX tracks from your accounts · coming soon
+        Pull GPX tracks from your accounts
       </div>
     </div>
     <div
-      class="rounded-full px-[9px] py-[3px] text-[10px] font-bold uppercase tracking-[0.08em]"
+      class="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-bold"
       style="background:#cdf0f5;color:#0e7490;"
+      aria-hidden="true"
     >
-      Soon
+      ↗
     </div>
   </button>
 </div>
