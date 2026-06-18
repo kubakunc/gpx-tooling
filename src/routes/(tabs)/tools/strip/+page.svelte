@@ -16,9 +16,14 @@
   const t = toolThemes.strip;
 
   let busy = $state(false);
-  let stripSensors = $state(true);
+  // Default every toggle OFF so opening the tool and exporting never silently
+  // drops HR/cadence/power, timestamps or elevation.
+  let stripSensors = $state(false);
   let stripTimestamps = $state(false);
   let stripElevation = $state(false);
+
+  // Nothing to strip until the user turns at least one toggle on.
+  let anyToggleOn = $derived(stripSensors || stripTimestamps || stripElevation);
 
   $effect(() => {
     if ($loadedFiles.length > 0) void adManager.prepareInterstitial();
@@ -81,7 +86,7 @@
   }
 
   async function stripAndExport() {
-    if (busy || !activeFile) return;
+    if (busy || !activeFile || !anyToggleOn) return;
     busy = true;
     try {
       const name = exportName(activeFile.name, 'stripped');
@@ -96,7 +101,7 @@
   }
 
   async function saveToDevice() {
-    if (busy || !activeFile) return;
+    if (busy || !activeFile || !anyToggleOn) return;
     busy = true;
     try {
       const name = exportName(activeFile.name, 'stripped');
@@ -179,6 +184,9 @@
             <Toggle on={isOn(row.key)} accent={t.button} />
           </button>
         {/each}
+        <p data-testid="strip-reassurance" class="px-1 text-[12px]" style="color:#8a9099;">
+          Your original file is unchanged.
+        </p>
       </div>
     {/if}
   </div>
@@ -190,7 +198,7 @@
           data-testid="strip-export"
           class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
-          disabled={busy}
+          disabled={busy || !anyToggleOn}
           onclick={stripAndExport}
         >
           {#if busy}<Spinner /> Working…{:else}Strip &amp; export{/if}
@@ -199,7 +207,7 @@
           data-testid="strip-save"
           class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
           style="border-color:{t.button};color:{t.button};background:#fff;"
-          disabled={busy}
+          disabled={busy || !anyToggleOn}
           onclick={saveToDevice}
         >
           {#if busy}<Spinner /> Working…{:else}Save to device{/if}

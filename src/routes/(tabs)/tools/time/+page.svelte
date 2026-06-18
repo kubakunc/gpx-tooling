@@ -9,7 +9,7 @@
   import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { setStartTime, shiftTimeSeconds, removeStillTime } from '$lib/domain/usecases/timeTools';
-  import { fileStartMs } from '$lib/domain/usecases/mergeEngine';
+  import { fileStartMs, fileEndMs } from '$lib/domain/usecases/mergeEngine';
   import { exportName, formatDuration } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
@@ -59,8 +59,36 @@
     return { points: pts, removedSeconds: 0 };
   });
 
+  // The start the user has entered (ms epoch), or null when blank/invalid.
+  let startInputMs = $derived(startInput ? Date.parse(startInput) : NaN);
+  // Did the user actually change anything? Start differs from the file's
+  // original start (compared at minute resolution, matching the input), OR a
+  // non-zero shift, OR remove-still is on.
+  let startChanged = $derived(
+    hasTime &&
+      startMs !== null &&
+      Number.isFinite(startInputMs) &&
+      // toLocalInput truncates to the minute, so compare at minute resolution.
+      Math.floor(startInputMs / 60000) !== Math.floor(startMs / 60000)
+  );
+  let changed = $derived(startChanged || shiftSeconds !== 0 || removeStill);
+
+  // Resulting start time + total duration after the composed transforms.
+  let resultStartMs = $derived(fileStartMs(result.points));
+  let resultEndMs = $derived(fileEndMs(result.points));
+  let resultDurationSec = $derived(
+    resultStartMs !== null && resultEndMs !== null ? (resultEndMs - resultStartMs) / 1000 : 0
+  );
+
   function nudge(deltaSec: number) {
     shiftSeconds += deltaSec;
+  }
+
+  // ms epoch → "YYYY-MM-DD HH:mm" local (mirrors toLocalInput's resolution).
+  function formatLocalDateTime(ms: number): string {
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
   function shiftLabel(sec: number): string {
@@ -86,7 +114,7 @@
   }
 
   async function applyAndExport() {
-    if (busy || !activeFile) return;
+    if (busy || !activeFile || !changed) return;
     busy = true;
     try {
       const xml = serializeGpx(result.points, 'retimed');
@@ -102,7 +130,7 @@
   }
 
   async function saveToDevice() {
-    if (busy || !activeFile) return;
+    if (busy || !activeFile || !changed) return;
     busy = true;
     try {
       const xml = serializeGpx(result.points, 'retimed');
@@ -225,6 +253,19 @@
           </div>
           <Toggle on={removeStill} accent={t.button} />
         </button>
+
+        <!-- Resulting summary after the composed transforms -->
+        <div
+          data-testid="time-summary"
+          class="mx-6 mt-[14px] rounded-[16px] border p-4 text-[12px] leading-[1.5]"
+          style="border-color:#f1e7da;background:{t.tile};color:{t.title};"
+        >
+          {#if resultStartMs !== null}
+            Starts {formatLocalDateTime(resultStartMs)} · total {formatDuration(resultDurationSec)}
+          {:else}
+            No timestamps in the result.
+          {/if}
+        </div>
       {/if}
     {/if}
   </div>
@@ -236,7 +277,7 @@
           data-testid="time-export"
           class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
-          disabled={busy}
+          disabled={busy || !changed}
           onclick={applyAndExport}
         >
           {#if busy}<Spinner /> Working…{:else}Apply &amp; export{/if}
@@ -245,7 +286,7 @@
           data-testid="time-save"
           class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
           style="border-color:{t.button};color:{t.button};background:#fff;"
-          disabled={busy}
+          disabled={busy || !changed}
           onclick={saveToDevice}
         >
           {#if busy}<Spinner /> Working…{:else}Save to device{/if}
