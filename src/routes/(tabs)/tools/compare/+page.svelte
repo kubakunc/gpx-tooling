@@ -161,12 +161,12 @@
         </p>
       </div>
     {:else}
-      <div class="mx-6 mt-[6px] flex gap-[10px]">
-        <label class="flex flex-1 items-center gap-2 rounded-[12px] px-3 py-[10px]" style="background:{t.tile};">
+      <div class="mx-6 mt-[6px] flex items-stretch gap-[10px]">
+        <label class="flex h-[40px] flex-1 items-center gap-2 rounded-[12px] px-3" style="background:{t.tile};">
           <span class="h-[9px] w-[9px] shrink-0 rounded-full" style="background:{t.icon};"></span>
           <select
             bind:value={idA}
-            class="min-w-0 flex-1 truncate bg-transparent text-[13px] font-bold outline-none"
+            class="min-w-0 flex-1 truncate appearance-none bg-transparent text-[13px] font-bold outline-none"
             style="color:{t.title};"
             aria-label="Track A"
           >
@@ -174,12 +174,13 @@
               <option value={f.id}>{f.name}</option>
             {/each}
           </select>
+          <span class="shrink-0 text-[11px]" style="color:{t.title};" aria-hidden="true">▾</span>
         </label>
-        <label class="flex flex-1 items-center gap-2 rounded-[12px] px-3 py-[10px]" style="background:#fef3c7;">
+        <label class="flex h-[40px] flex-1 items-center gap-2 rounded-[12px] px-3" style="background:#fef3c7;">
           <span class="h-[9px] w-[9px] shrink-0 rounded-full" style="background:{AMBER};"></span>
           <select
             bind:value={idB}
-            class="min-w-0 flex-1 truncate bg-transparent text-[13px] font-bold outline-none"
+            class="min-w-0 flex-1 truncate appearance-none bg-transparent text-[13px] font-bold outline-none"
             style="color:#92400e;"
             aria-label="Track B"
           >
@@ -187,6 +188,7 @@
               <option value={f.id}>{f.name}</option>
             {/each}
           </select>
+          <span class="shrink-0 text-[11px]" style="color:#92400e;" aria-hidden="true">▾</span>
         </label>
       </div>
 
