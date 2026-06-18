@@ -8,7 +8,7 @@
   import { toolThemes, rgba } from '$lib/toolThemes';
   import type { LoadedFile } from '$lib/stores/loadedFiles';
   import { loadedFiles, addFiles, removeFile, reorderFiles } from '$lib/stores/loadedFiles';
-  import { fileService } from '$lib/data/io/FileService';
+  import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import {
     totalDistanceMeters,
@@ -98,6 +98,21 @@
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function saveToDevice() {
+    if (busy || $loadedFiles.length < 2) return;
+    busy = true;
+    try {
+      const xml = serializeGpxSegments(result.segments, 'merged');
+      const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
+      await fileService.saveToDevice(xml, name);
+      showToast(savedToDeviceMessage(name), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
       busy = false;
     }
@@ -459,15 +474,26 @@
           Add another file to merge.
         </div>
       {/if}
-      <button
-        data-testid="merge-export"
-        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
-        style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
-        disabled={busy || $loadedFiles.length < 2}
-        onclick={mergeAndExport}
-      >
-        {#if busy}<Spinner /> Working…{:else}Merge &amp; export{/if}
-      </button>
+      <div class="flex gap-3">
+        <button
+          data-testid="merge-export"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
+          style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
+          disabled={busy || $loadedFiles.length < 2}
+          onclick={mergeAndExport}
+        >
+          {#if busy}<Spinner /> Working…{:else}Merge &amp; export{/if}
+        </button>
+        <button
+          data-testid="merge-save"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
+          style="border-color:{t.button};color:{t.button};background:#fff;"
+          disabled={busy || $loadedFiles.length < 2}
+          onclick={saveToDevice}
+        >
+          {#if busy}<Spinner /> Working…{:else}Save to device{/if}
+        </button>
+      </div>
     </div>
   {/if}
 </div>

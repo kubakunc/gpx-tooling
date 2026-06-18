@@ -19,7 +19,7 @@ vi.mock('@capacitor/filesystem', () => ({
     getUri: (...a: unknown[]) => getUri(...a),
     readFile: (...a: unknown[]) => readFile(...a)
   },
-  Directory: { Cache: 'CACHE' },
+  Directory: { Cache: 'CACHE', Documents: 'DOCUMENTS' },
   Encoding: { UTF8: 'utf8' }
 }));
 vi.mock('@capacitor/share', () => ({
@@ -36,7 +36,8 @@ import {
   isFitName,
   ensureGpxExt,
   ensureExportExt,
-  friendlyImportError
+  friendlyImportError,
+  savedToDeviceMessage
 } from './FileService';
 import { buildFitFixture, type FitFixtureRecord } from '$lib/data/parsing/fit/buildFitFixture';
 
@@ -97,6 +98,10 @@ describe('pure helpers', () => {
     expect(friendlyImportError(new ParseError('bad xml'))).toContain('bad xml');
     expect(friendlyImportError(new Error('boom'))).toContain('boom');
     expect(typeof friendlyImportError('weird')).toBe('string');
+  });
+
+  it('savedToDeviceMessage formats the Documents path', () => {
+    expect(savedToDeviceMessage('ride-merged.gpx')).toBe('Saved to Documents/ride-merged.gpx');
   });
 });
 
@@ -259,6 +264,47 @@ describe('exportAndShare', () => {
     expect(clickSpy).toHaveBeenCalled();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:fake');
     clickSpy.mockRestore();
+  });
+});
+
+describe('saveToDevice', () => {
+  it('native: writes to Documents (recursive) and returns the uri', async () => {
+    isNativePlatform.mockReturnValue(true);
+    writeFile.mockResolvedValue({});
+    getUri.mockResolvedValue({ uri: 'file:///docs/out.gpx' });
+    const svc = new FileService();
+    const uri = await svc.saveToDevice('<gpx/>', 'out.gpx');
+    expect(writeFile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        path: 'out.gpx',
+        data: '<gpx/>',
+        encoding: 'utf8',
+        directory: 'DOCUMENTS',
+        recursive: true
+      })
+    );
+    expect(getUri).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'out.gpx', directory: 'DOCUMENTS' })
+    );
+    expect(uri).toBe('file:///docs/out.gpx');
+    expect(share).not.toHaveBeenCalled();
+  });
+
+  it('native: surfaces a friendly error if write fails', async () => {
+    isNativePlatform.mockReturnValue(true);
+    writeFile.mockRejectedValue(new Error('disk full'));
+    const svc = new FileService();
+    await expect(svc.saveToDevice('<gpx/>', 'out.gpx')).rejects.toThrow(/disk full/);
+  });
+
+  it('web: falls back to the Blob download and returns empty uri', async () => {
+    isNativePlatform.mockReturnValue(false);
+    const download = vi.fn();
+    const svc = new FileService({ download });
+    const uri = await svc.saveToDevice('<gpx/>', 'out.gpx');
+    expect(download).toHaveBeenCalledWith('<gpx/>', 'out.gpx');
+    expect(uri).toBe('');
+    expect(writeFile).not.toHaveBeenCalled();
   });
 });
 
