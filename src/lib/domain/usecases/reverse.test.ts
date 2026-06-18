@@ -43,6 +43,32 @@ describe('reverseTrack', () => {
     expect(newDur).toBe(origDur);
   });
 
+  it('produces strictly increasing timestamps and same total duration for UNSORTED timed input', () => {
+    // Deliberately out-of-order timestamps (not ascending). Gaps once sorted
+    // ascending are 10s then 30s → total 40s.
+    const input = [
+      tp(2, '2026-01-01T00:00:10Z'),
+      tp(3, '2026-01-01T00:00:40Z'),
+      tp(1, '2026-01-01T00:00:00Z')
+    ];
+    const out = reverseTrack(input);
+    // Geometry travels with the time-sorted-then-reversed order: latest-time
+    // point first (lat 3), then lat 2, then lat 1.
+    expect(out.map((p) => p.latitude)).toEqual([3, 2, 1]);
+    // Timestamps strictly increasing.
+    for (let i = 1; i < out.length; i++) {
+      expect(out[i].time!.getTime()).toBeGreaterThan(out[i - 1].time!.getTime());
+    }
+    // Earliest original timestamp preserved as the new t0.
+    expect(out[0].time?.toISOString()).toBe('2026-01-01T00:00:00.000Z');
+    // First reversed gap = 30s, then 10s.
+    expect(out[1].time?.toISOString()).toBe('2026-01-01T00:00:30.000Z');
+    expect(out[2].time?.toISOString()).toBe('2026-01-01T00:00:40.000Z');
+    // Same total duration as the input span (max - min = 40s).
+    const newDur = out[out.length - 1].time!.getTime() - out[0].time!.getTime();
+    expect(newDur).toBe(40_000);
+  });
+
   it('nulls all times when any point is untimed', () => {
     const input = [tp(1, '2026-01-01T00:00:00Z'), tp(2, null), tp(3, '2026-01-01T00:00:40Z')];
     const out = reverseTrack(input);
