@@ -36,3 +36,16 @@ ${points.map(trkptXml).join('\n')}
   </trk>
 </gpx>`;
 }
+
+export function serializeGpxSegments(segments: TrackPoint[][], name: string): string {
+  const segs = segments
+    .map((seg) => `    <trkseg>\n${seg.map(trkptXml).join('\n')}\n    </trkseg>`)
+    .join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="GPX Tooling Suite" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+  <trk>
+    <name>${esc(name)}</name>
+${segs}
+  </trk>
+</gpx>`;
+}

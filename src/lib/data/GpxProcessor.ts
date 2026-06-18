@@ -2,7 +2,7 @@ import type { GpxFile } from '../domain/entities/GpxFile';
 import type { TrackPoint } from '../domain/entities/TrackPoint';
 import { parseGpx } from './parsing/GpxParser';
 import { serializeGpx } from './serialization/GpxSerializer';
-import { mergeChronologically } from '../domain/usecases/merge';
+import { analyzeMerge, type MergeOptions } from '../domain/usecases/mergeEngine';
 import { trimGpx } from '../domain/usecases/trim';
 import { simplifyRdp } from '../domain/usecases/simplify';
 import { repairElevation, type RepairOptions } from '../domain/usecases/repairElevation';
@@ -14,9 +14,12 @@ export class GpxProcessor {
   serialize(points: TrackPoint[], name: string): string {
     return serializeGpx(points, name);
   }
-  merge(files: GpxFile[]): GpxFile {
-    const points = mergeChronologically(files.map((f) => f.points));
-    return { name: 'merged', points };
+  merge(files: GpxFile[], options: MergeOptions = { mode: 'smart' }): GpxFile {
+    const result = analyzeMerge(
+      files.map((f) => ({ name: f.name, points: f.points })),
+      options
+    );
+    return { name: 'merged', points: result.segments.flat() };
   }
   trim(points: TrackPoint[], start: number, end: number): TrackPoint[] {
     return trimGpx(points, start, end);

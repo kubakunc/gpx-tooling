@@ -12,11 +12,19 @@ describe('GpxProcessor', () => {
     const xml = proc.serialize(file.points, 'out');
     expect(proc.parse(xml, 'out').points[0].latitude).toBe(49.1);
   });
-  it('merges files chronologically', () => {
+  it('merges files chronologically (smart by default) into a flat GpxFile', () => {
     const a = proc.parse(gpx(1, '2026-01-01T00:02:00Z'), 'a.gpx');
     const b = proc.parse(gpx(2, '2026-01-01T00:01:00Z'), 'b.gpx');
     const merged = proc.merge([a, b]);
+    // Smart mode orders files by start time: b (00:01) before a (00:02).
     expect(merged.points.map((p) => p.latitude)).toEqual([2, 1]);
+    expect(merged.name).toBe('merged');
+  });
+  it('merges in sequential mode preserving file order', () => {
+    const a = proc.parse(gpx(1, '2026-01-01T00:02:00Z'), 'a.gpx');
+    const b = proc.parse(gpx(2, '2026-01-01T00:01:00Z'), 'b.gpx');
+    const merged = proc.merge([a, b], { mode: 'sequential' });
+    expect(merged.points.map((p) => p.latitude)).toEqual([1, 2]);
   });
   it('exposes trim, simplify and repair over points', () => {
     const file = proc.parse(gpx(0, '2026-01-01T00:00:00Z'), 'a.gpx');

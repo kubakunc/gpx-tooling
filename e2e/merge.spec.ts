@@ -59,3 +59,50 @@ test.describe('merge — import flow', () => {
     await expect(page.getByTestId('merge-export')).toBeEnabled();
   });
 });
+
+test.describe('merge v2 — analysis panel & segments', () => {
+  test('analysis panel shows segments and points; sequential mode still exports', async ({
+    page
+  }) => {
+    await page.goto('/tools/merge');
+    await importViaPicker(
+      page,
+      () => page.getByTestId('import-button').click(),
+      'ride-a.gpx',
+      'ride-b.gpx'
+    );
+
+    // Live analysis panel renders with real stats.
+    await expect(page.getByTestId('merge-analysis')).toBeVisible();
+    await expect(page.getByTestId('merge-stat-segments')).toBeVisible();
+    await expect(page.getByTestId('merge-stat-points')).toBeVisible();
+    // Points should be the parsed total (6 + 6 = 12).
+    await expect(page.getByTestId('merge-stat-points')).toHaveText('12');
+
+    // Switch to Sequential and confirm export still works.
+    await page.getByTestId('merge-mode-sequential').click();
+    await expect(page.getByTestId('merge-mode-sequential')).toHaveAttribute('aria-pressed', 'true');
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('merge-export').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.gpx$/);
+  });
+
+  test('a geographically gapped pair yields more than one segment', async ({ page }) => {
+    await page.goto('/tools/merge');
+    await importViaPicker(
+      page,
+      () => page.getByTestId('import-button').click(),
+      'ride-a.gpx',
+      'ride-far.gpx'
+    );
+
+    await expect(page.getByTestId('file-row')).toHaveCount(2);
+    // The two tracks are ~140 km apart → at least 2 segments.
+    const segCount = await page.getByTestId('merge-stat-segments').textContent();
+    expect(Number(segCount)).toBeGreaterThanOrEqual(2);
+    // A gap issue should be listed in the analysis panel.
+    await expect(page.getByTestId('merge-issue').first()).toBeVisible();
+  });
+});
