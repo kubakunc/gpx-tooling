@@ -15,9 +15,11 @@
     "test:e2e:ui": "playwright test --ui",
     "sync": "cap sync android",
     "android:add": "cap add android",
-    "android": "npm run build && cap sync android"
+    "android": "npm run build && cap sync android",
+    "icons:generate": "capacitor-assets generate --android"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@playwright/test": "^1.61.0",
     "@sveltejs/adapter-static": "^3.0.6",
     "@sveltejs/kit": "^2.8.0",
