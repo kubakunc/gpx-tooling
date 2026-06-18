@@ -15,10 +15,14 @@
     keptRange?: [number, number];
     /** Reduce: the simplified subset to overlay. */
     simplified?: LatLon[];
+    /** Merge: per-segment coords. When provided, each segment is its own polyline
+     * (no line across gaps); falls back to single `route` when absent. */
+    segments?: LatLon[][];
     /** Corner for the zoom (+/-) control; placed clear of the screen's badges. */
     zoomPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
   }
-  let { variant, route, keptRange, simplified, zoomPosition = 'topright' }: Props = $props();
+  let { variant, route, keptRange, simplified, segments, zoomPosition = 'topright' }: Props =
+    $props();
 
   let el: HTMLDivElement;
   let map: LeafletMap | null = null;
@@ -75,12 +79,34 @@
       }).addTo(group);
 
     const hasReal = !!route && route.length >= 2;
-    const coords: [number, number][] = hasReal ? route!.map(toLatLng) : demoRoute;
+    // Per-segment coords (merge): each drawable segment with >= 2 points.
+    const segCoords: [number, number][][] =
+      segments && segments.length > 0
+        ? segments.map((s) => s.map(toLatLng)).filter((s) => s.length >= 1)
+        : [];
+    const hasSegments = variant === 'merge' && segCoords.some((s) => s.length >= 1);
+    // Overall flattened coords drive fitBounds / fit-key / endpoint dots.
+    const coords: [number, number][] = hasSegments
+      ? segCoords.flat()
+      : hasReal
+        ? route!.map(toLatLng)
+        : demoRoute;
 
     if (variant === 'merge') {
-      // Single emerald route over a white casing.
-      Lib.polyline(coords, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(group);
-      Lib.polyline(coords, { color: '#10b981', weight: 5 }).addTo(group);
+      if (hasSegments) {
+        // One white-casing + emerald polyline PER segment so gaps stay visible
+        // (no line is drawn across a gap between segments).
+        for (const seg of segCoords) {
+          if (seg.length < 2) continue;
+          Lib.polyline(seg, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(group);
+          Lib.polyline(seg, { color: '#10b981', weight: 5 }).addTo(group);
+        }
+      } else {
+        // Single emerald route over a white casing.
+        Lib.polyline(coords, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(group);
+        Lib.polyline(coords, { color: '#10b981', weight: 5 }).addTo(group);
+      }
+      // Start/end dots on the whole route.
       dot(coords[0], '#059669');
       dot(coords[coords.length - 1], '#059669');
     } else if (variant === 'trim') {
@@ -121,7 +147,7 @@
 
     // Only auto-fit when the underlying route changes; otherwise keep the user's
     // current zoom/pan (e.g. while dragging the trim/reduce sliders).
-    const fitKey = `${coords.length}|${coords[0]?.join(',')}|${coords[coords.length - 1]?.join(',')}`;
+    const fitKey = `${segCoords.length}|${coords.length}|${coords[0]?.join(',')}|${coords[coords.length - 1]?.join(',')}`;
     const shouldFit = fitKey !== lastFitKey;
     lastFitKey = fitKey;
 
@@ -176,6 +202,7 @@
     void route;
     void keptRange;
     void simplified;
+    void segments;
     void variant;
     if (map && overlay && L) redraw();
   });
