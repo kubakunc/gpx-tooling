@@ -178,45 +178,8 @@
         </div>
       </div>
 
-      <div class="px-6 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-faint">
-        Elevation source
-      </div>
-      <div class="flex gap-2 px-6 pt-[10px]">
-        <div
-          class="flex-1 rounded-[13px] text-center text-[13px] font-extrabold"
-          style="padding-top:10px;padding-bottom:10px;background:{t.tile};border:2px solid {t.icon};color:{t.title};"
-        >
-          GPS
-        </div>
-        <div
-          class="relative flex-1 cursor-not-allowed rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f] opacity-50"
-          style="padding-top:11px;padding-bottom:11px;border-color:#efece6;"
-          aria-disabled="true"
-        >
-          SRTM
-          <span
-            class="absolute right-[6px] top-[5px] rounded-full px-[6px] py-[1px] text-[8px] font-bold uppercase tracking-[0.08em]"
-            style="background:rgba(255,255,255,0.8);color:#b08b4a;"
-          >
-            Soon
-          </span>
-        </div>
-        <div
-          class="relative flex-1 cursor-not-allowed rounded-[13px] border bg-[#faf6ec] text-center text-[13px] font-bold text-[#c2b48f] opacity-50"
-          style="padding-top:11px;padding-bottom:11px;border-color:#efece6;"
-          aria-disabled="true"
-        >
-          Mapbox
-          <span
-            class="absolute right-[6px] top-[5px] rounded-full px-[6px] py-[1px] text-[8px] font-bold uppercase tracking-[0.08em]"
-            style="background:rgba(255,255,255,0.8);color:#b08b4a;"
-          >
-            Soon
-          </span>
-        </div>
-      </div>
-      <div class="px-6 pt-[6px] text-[11px]" style="color:#c2b48f;">
-        SRTM &amp; Mapbox online sources — coming soon. GPS uses the track's own elevation.
+      <div class="px-6 text-[11px]" style="color:#b08b4a;">
+        Corrects the track's own recorded (GPS) elevation.
       </div>
 
       <div class="mx-6 mb-4 mt-[18px] rounded-[16px] border bg-white px-4 py-[14px]" style="border-color:#efece6;">

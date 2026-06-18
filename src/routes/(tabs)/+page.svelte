@@ -111,29 +111,34 @@
   <button
     type="button"
     onclick={openStravaExporter}
-    class="flex w-full items-center gap-[14px] rounded-[18px] border p-[14px] text-left"
-    style="background:{relatedApp.tile};border-color:{relatedApp.border};"
+    data-testid="related-app"
+    class="w-full overflow-hidden rounded-[20px] border p-[16px] text-left"
+    style="background:{relatedApp.tile};border-color:{relatedApp.border};box-shadow:0 8px 22px rgba(6,182,212,0.12);"
   >
+    <div class="flex items-center gap-[14px]">
+      <!-- App icon. Swap this gradient tile for the real <img> logo when available. -->
+      <div
+        class="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-[16px] text-[26px] font-extrabold text-white"
+        style="background:linear-gradient(145deg,#22d3ee,#0891b2);box-shadow:0 6px 14px rgba(6,182,212,0.4);"
+        aria-hidden="true"
+      >
+        ↧
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="text-[16px] font-extrabold" style="color:{relatedApp.title};">GPX Exporter</div>
+        <div class="text-[11px] font-semibold" style="color:{relatedApp.subtitle};">
+          by VeloLogic Labs · Free
+        </div>
+      </div>
+    </div>
+    <div class="mt-[12px] text-[12px] leading-[1.5]" style="color:{relatedApp.title};">
+      Pull your rides straight from <b>Strava</b>, <b>Komoot</b> &amp; <b>Garmin</b> — no fiddly manual export. Then merge, trim &amp; repair them right here.
+    </div>
     <div
-      class="flex h-[44px] w-[44px] items-center justify-center rounded-[13px] text-[21px] text-white"
+      class="mt-[12px] flex items-center justify-center gap-[6px] rounded-[12px] py-[10px] text-[13px] font-extrabold text-white"
       style="background:{relatedApp.icon};"
     >
-      ↧
-    </div>
-    <div class="flex-1">
-      <div class="text-[15px] font-extrabold" style="color:{relatedApp.title};">
-        Export from Strava &amp; Komoot
-      </div>
-      <div class="text-[11px]" style="color:{relatedApp.subtitle};">
-        Pull GPX tracks from your accounts
-      </div>
-    </div>
-    <div
-      class="flex h-[28px] w-[28px] items-center justify-center rounded-full text-[14px] font-bold"
-      style="background:#cdf0f5;color:#0e7490;"
-      aria-hidden="true"
-    >
-      ↗
+      Get it on Google Play <span aria-hidden="true">↗</span>
     </div>
   </button>
 </div>

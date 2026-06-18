@@ -18,14 +18,15 @@ function realErrors(errors: string[]): string[] {
 }
 
 test.describe('navigation', () => {
-  test('hub shows the suite header, 6 tiles and the related-app card', async ({ page }) => {
+  test('hub shows the suite header, all tiles and the related-app card', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByText('GPX Suite').first()).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Tools', exact: true })).toBeVisible();
     for (const tile of TILES) {
       await expect(page.getByRole('link', { name: new RegExp(tile.title, 'i') })).toBeVisible();
     }
-    await expect(page.getByText('Export from Strava')).toBeVisible();
+    await expect(page.getByTestId('related-app')).toBeVisible();
+    await expect(page.getByText('Get it on Google Play')).toBeVisible();
   });
 
   test('each tile navigates to its tool and back to the hub', async ({ page }) => {
