@@ -1,4 +1,14 @@
-export type ToolKey = 'merge' | 'trim' | 'convert' | 'elevation' | 'reduce' | 'compare';
+export type ToolKey =
+  | 'merge'
+  | 'trim'
+  | 'convert'
+  | 'elevation'
+  | 'reduce'
+  | 'compare'
+  | 'reverse'
+  | 'strip'
+  | 'time'
+  | 'repair';
 
 export interface ToolTheme {
   /** Hub tile background */
@@ -19,7 +29,11 @@ export const toolThemes: Record<ToolKey, ToolTheme> = {
   convert: { tile: '#fdf2f8', icon: '#ec4899', title: '#831843', subtitle: '#b06a8c', button: '#be185d' },
   elevation: { tile: '#fef3c7', icon: '#f59e0b', title: '#92400e', subtitle: '#b45309', button: '#b45309' },
   reduce: { tile: '#f3e8ff', icon: '#8b5cf6', title: '#4c1d95', subtitle: '#8a6fc0', button: '#6d28d9' },
-  compare: { tile: '#eef2ff', icon: '#6366f1', title: '#3730a3', subtitle: '#7c83c4', button: '#4f46e5' }
+  compare: { tile: '#eef2ff', icon: '#6366f1', title: '#3730a3', subtitle: '#7c83c4', button: '#4f46e5' },
+  reverse: { tile: '#f0fdfa', icon: '#14b8a6', title: '#134e4a', subtitle: '#5b9a92', button: '#0d9488' },
+  strip: { tile: '#f8fafc', icon: '#64748b', title: '#1e293b', subtitle: '#7c8694', button: '#475569' },
+  time: { tile: '#fff7ed', icon: '#f97316', title: '#7c2d12', subtitle: '#b07a5a', button: '#ea580c' },
+  repair: { tile: '#fff1f2', icon: '#f43f5e', title: '#881337', subtitle: '#b46a7e', button: '#e11d48' }
 };
 
 /**

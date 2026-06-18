@@ -44,6 +44,34 @@
       title: 'Compare tracks',
       subtitle: 'Chart two files together',
       soon: false
+    },
+    {
+      key: 'reverse',
+      href: '/tools/reverse',
+      title: 'Reverse track',
+      subtitle: 'Flip the route direction',
+      soon: false
+    },
+    {
+      key: 'strip',
+      href: '/tools/strip',
+      title: 'Strip & minify',
+      subtitle: 'Remove data, shrink file',
+      soon: false
+    },
+    {
+      key: 'time',
+      href: '/tools/time',
+      title: 'Time & speed',
+      subtitle: 'Fix start time & pauses',
+      soon: false
+    },
+    {
+      key: 'repair',
+      href: '/tools/repair',
+      title: 'Repair file',
+      subtitle: 'Clean GPS spikes & errors',
+      soon: false
     }
   ] as const;
 
