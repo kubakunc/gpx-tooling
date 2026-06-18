@@ -116,23 +116,25 @@
     style="background:{relatedApp.tile};border-color:{relatedApp.border};box-shadow:0 8px 22px rgba(6,182,212,0.12);"
   >
     <div class="flex items-center gap-[14px]">
-      <!-- App icon. Swap this gradient tile for the real <img> logo when available. -->
-      <div
-        class="flex h-[56px] w-[56px] shrink-0 items-center justify-center rounded-[16px] text-[26px] font-extrabold text-white"
-        style="background:linear-gradient(145deg,#22d3ee,#0891b2);box-shadow:0 6px 14px rgba(6,182,212,0.4);"
-        aria-hidden="true"
-      >
-        ↧
-      </div>
+      <img
+        src="/gpx-exporter-icon.webp"
+        alt="Export GPX for Strava, Komoot app icon"
+        width="56"
+        height="56"
+        class="h-[56px] w-[56px] shrink-0 rounded-[16px]"
+        style="box-shadow:0 6px 14px rgba(0,0,0,0.18);"
+      />
       <div class="min-w-0 flex-1">
-        <div class="text-[16px] font-extrabold" style="color:{relatedApp.title};">GPX Exporter</div>
-        <div class="text-[11px] font-semibold" style="color:{relatedApp.subtitle};">
+        <div class="text-[16px] font-extrabold leading-[1.2]" style="color:{relatedApp.title};">
+          Export GPX for Strava, Komoot
+        </div>
+        <div class="mt-[2px] text-[11px] font-semibold" style="color:{relatedApp.subtitle};">
           by VeloLogic Labs · Free
         </div>
       </div>
     </div>
     <div class="mt-[12px] text-[12px] leading-[1.5]" style="color:{relatedApp.title};">
-      Pull your rides straight from <b>Strava</b>, <b>Komoot</b> &amp; <b>Garmin</b> — no fiddly manual export. Then merge, trim &amp; repair them right here.
+      Pull your rides straight from your accounts — no fiddly manual export. Then merge, trim &amp; repair them right here.
     </div>
     <div
       class="mt-[12px] flex items-center justify-center gap-[6px] rounded-[12px] py-[10px] text-[13px] font-extrabold text-white"
