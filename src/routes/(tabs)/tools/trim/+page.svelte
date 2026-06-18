@@ -125,7 +125,7 @@
       />
 
       <div
-        class="relative mx-6 mt-3 h-[150px] overflow-hidden rounded-[20px] border"
+        class="relative mx-6 mt-3 h-[340px] overflow-hidden rounded-[20px] border"
         style="background:#e8eef4;border-color:#dbe5f0;"
       >
         <RouteMap variant="trim" {route} keptRange={[start, end]} />

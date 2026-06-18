@@ -155,7 +155,7 @@
         class="mx-6 mt-[14px] overflow-hidden rounded-[22px] border"
         style="border-color:#e6dff5;box-shadow:0 8px 22px {rgba(t.icon, 0.1)};"
       >
-        <div class="relative h-[150px]" style="background:#ece9f4;">
+        <div class="relative h-[340px]" style="background:#ece9f4;">
           <RouteMap variant="reduce" {route} {simplified} />
           <MapBadge position="left-3 top-3" extraClass="text-[11px] font-extrabold">
             <span style="color:{t.title};">Kept route</span>
