@@ -117,3 +117,55 @@ export function dedupePoints(points: TrackPoint[]): { points: TrackPoint[]; remo
   }
   return { points: out, removed };
 }
+
+export function splitIntoSegments(
+  points: TrackPoint[],
+  opts: {
+    gapMeters?: number;
+    maxSpeedMps?: number;
+    timeGapSeconds?: number;
+    forceContinuous?: boolean;
+  }
+): { segments: TrackPoint[][]; issues: MergeIssue[] } {
+  if (points.length === 0) return { segments: [], issues: [] };
+  if (opts.forceContinuous) return { segments: [points], issues: [] };
+  const gapMeters = opts.gapMeters ?? 100;
+  const maxSpeedMps = opts.maxSpeedMps ?? 42;
+  const issues: MergeIssue[] = [];
+  const segments: TrackPoint[][] = [];
+  let cur: TrackPoint[] = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const p = points[i];
+    const dist = haversineMeters(prev.latitude, prev.longitude, p.latitude, p.longitude);
+    const dt = prev.time && p.time ? (p.time.getTime() - prev.time.getTime()) / 1000 : null;
+    let split: MergeIssue | null = null;
+    if (dist > gapMeters) {
+      split = {
+        kind: 'gap',
+        meters: Math.round(dist),
+        message: `Gap of ${(dist / 1000).toFixed(2)} km — split into a new segment.`
+      };
+    } else if (dt !== null && dt > 0 && dist / dt > maxSpeedMps) {
+      const speedKmh = Math.round((dist / dt) * 3.6);
+      split = {
+        kind: 'teleport',
+        speedKmh,
+        message: `Implausible speed ${speedKmh} km/h — split into a new segment.`
+      };
+    } else if (opts.timeGapSeconds && dt !== null && dt > opts.timeGapSeconds) {
+      split = {
+        kind: 'gap',
+        seconds: Math.round(dt),
+        message: `Pause of ${Math.round(dt / 60)} min — split into a new segment.`
+      };
+    }
+    if (split) {
+      segments.push(cur);
+      cur = [p];
+      issues.push(split);
+    } else cur.push(p);
+  }
+  segments.push(cur);
+  return { segments, issues };
+}

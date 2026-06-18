@@ -4,7 +4,8 @@ import {
   fileStartMs,
   fileEndMs,
   detectTimeOverlaps,
-  dedupePoints
+  dedupePoints,
+  splitIntoSegments
 } from './mergeEngine';
 import type { TrackPoint } from '../entities/TrackPoint';
 
@@ -81,5 +82,48 @@ describe('dedupePoints', () => {
   });
   it('handles an empty input', () => {
     expect(dedupePoints([])).toEqual({ points: [], removed: 0 });
+  });
+});
+
+describe('splitIntoSegments', () => {
+  const opts = { gapMeters: 100, maxSpeedMps: 42, forceContinuous: false };
+  it('splits on a >gap jump and reports a gap issue', () => {
+    const pts = [tp(0, '2026-01-01T00:00:00Z'), tp(0, '2026-01-01T00:00:01Z')];
+    pts[1] = { ...pts[1], latitude: 0.01 }; // ~1.1km from pts[0]
+    const { segments, issues } = splitIntoSegments(pts, opts);
+    expect(segments).toHaveLength(2);
+    expect(issues.some((i) => i.kind === 'gap')).toBe(true);
+  });
+  it('forceContinuous yields a single segment and no split issues', () => {
+    const pts = [
+      tp(0, '2026-01-01T00:00:00Z'),
+      { ...tp(0, '2026-01-01T00:00:01Z'), latitude: 0.01 }
+    ];
+    const { segments, issues } = splitIntoSegments(pts, { ...opts, forceContinuous: true });
+    expect(segments).toHaveLength(1);
+    expect(issues).toEqual([]);
+  });
+  it('flags a teleport (impossible speed) within the gap threshold', () => {
+    // 89m in 1s = 89 m/s ~320km/h, under 100m gap but over maxSpeed
+    const a = tp(0, '2026-01-01T00:00:00Z');
+    const b = { ...tp(0, '2026-01-01T00:00:01Z'), latitude: 0.0008 }; // ~89m
+    const { segments, issues } = splitIntoSegments([a, b], opts);
+    expect(segments).toHaveLength(2);
+    expect(issues.some((i) => i.kind === 'teleport')).toBe(true);
+  });
+  it('splits on a long time pause when timeGapSeconds is set', () => {
+    const a = tp(0, '2026-01-01T00:00:00Z');
+    const b = { ...tp(0, '2026-01-01T01:00:00Z'), latitude: 0.00001 }; // tiny move, 1h pause
+    const { segments, issues } = splitIntoSegments([a, b], { ...opts, timeGapSeconds: 600 });
+    expect(segments).toHaveLength(2);
+    expect(issues.some((i) => i.kind === 'gap' && i.seconds !== undefined)).toBe(true);
+  });
+  it('returns [] for empty and [pts] for a clean track', () => {
+    expect(splitIntoSegments([], opts).segments).toEqual([]);
+    const clean = [
+      tp(0, '2026-01-01T00:00:00Z'),
+      { ...tp(0, '2026-01-01T00:00:30Z'), latitude: 0.0001 }
+    ];
+    expect(splitIntoSegments(clean, opts).segments).toHaveLength(1);
   });
 });
