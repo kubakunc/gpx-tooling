@@ -40,16 +40,19 @@ test.describe('navigation', () => {
     }
   });
 
-  test('bottom nav switches between Menu, Files and Settings', async ({ page }) => {
+  test('top-right menu switches between Menu, Files and Settings', async ({ page }) => {
     await page.goto('/');
+    await page.getByTestId('nav-toggle').click();
     await page.getByTestId('nav-files').click();
     await expect(page).toHaveURL(/\/files$/);
     await expect(page.getByRole('heading', { name: 'Files' })).toBeVisible();
 
+    await page.getByTestId('nav-toggle').click();
     await page.getByTestId('nav-settings').click();
     await expect(page).toHaveURL(/\/settings$/);
     await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
 
+    await page.getByTestId('nav-toggle').click();
     await page.getByTestId('nav-menu').click();
     await expect(page).toHaveURL(/\/$/);
   });
