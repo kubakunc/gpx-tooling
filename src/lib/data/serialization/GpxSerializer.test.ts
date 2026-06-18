@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect } from 'vitest';
-import { serializeGpx } from './GpxSerializer';
+import { serializeGpx, serializeGpxSegments } from './GpxSerializer';
 import { parseGpx } from '../parsing/GpxParser';
 import type { TrackPoint } from '../../domain/entities/TrackPoint';
 
@@ -23,5 +23,30 @@ describe('serializeGpx', () => {
   });
   it('XML-escapes the track name', () => {
     expect(serializeGpx([], 'a & b')).toContain('a &amp; b');
+  });
+});
+
+describe('serializeGpxSegments', () => {
+  it('emits one <trkseg> per segment and round-trips all points', () => {
+    const segs = [
+      [
+        {
+          latitude: 1,
+          longitude: 2,
+          elevation: 10,
+          time: new Date('2026-01-01T00:00:00Z'),
+          sensors: {}
+        }
+      ],
+      [{ latitude: 3, longitude: 4, elevation: null, time: null, sensors: { hr: 150 } }]
+    ];
+    const xml = serializeGpxSegments(segs, 'multi');
+    expect((xml.match(/<trkseg>/g) ?? []).length).toBe(2);
+    const back = parseGpx(xml, 'multi').points;
+    expect(back).toHaveLength(2);
+    expect(back[1].sensors.hr).toBe(150);
+  });
+  it('escapes the track name', () => {
+    expect(serializeGpxSegments([], 'a & b')).toContain('a &amp; b');
   });
 });
