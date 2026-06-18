@@ -69,38 +69,38 @@
   </button>
 
   {#if open}
-    <ul
-      class="absolute left-0 z-10 mt-[6px] w-[280px] max-w-[calc(100vw-48px)] overflow-hidden rounded-[14px] border bg-white py-1"
+    <div
+      class="absolute left-0 z-10 mt-[6px] w-[280px] max-w-[calc(100vw-48px)] overflow-hidden rounded-[14px] border bg-white"
       style="border-color:#eef0ec;box-shadow:0 12px 30px rgba(0,0,0,0.12);"
-      role="listbox"
     >
-      {#each files as f (f.id)}
-        <li role="option" aria-selected={f.id === active.id}>
-          <button
-            type="button"
-            class="flex w-full items-center gap-2 px-[14px] py-[10px] text-left text-[14px] font-bold text-ink"
-            onclick={() => choose(f.id)}
-          >
-            <span class="w-[14px] shrink-0" style="color:{accent};">
-              {f.id === active.id ? '✓' : ''}
-            </span>
-            <span class="truncate">{f.name}</span>
-          </button>
-        </li>
-      {/each}
-      <li class="mt-1 border-t" style="border-color:#f1f3ef;">
-        <button
-          type="button"
-          data-testid="active-file-import"
-          class="flex w-full items-center gap-2 px-[14px] py-[11px] text-left text-[14px] font-extrabold"
-          style="color:{accent};"
-          disabled={busy}
-          onclick={importFile}
-        >
-          <span class="w-[14px] shrink-0 text-center">＋</span>
-          <span>{busy ? 'Importing…' : 'Import a file'}</span>
-        </button>
-      </li>
-    </ul>
+      <ul class="py-1" role="listbox">
+        {#each files as f (f.id)}
+          <li role="option" aria-selected={f.id === active.id}>
+            <button
+              type="button"
+              class="flex w-full items-center gap-2 px-[14px] py-[10px] text-left text-[14px] font-bold text-ink"
+              onclick={() => choose(f.id)}
+            >
+              <span class="w-[14px] shrink-0" style="color:{accent};">
+                {f.id === active.id ? '✓' : ''}
+              </span>
+              <span class="truncate">{f.name}</span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+      <!-- Action button kept OUTSIDE the listbox so the listbox contains only options. -->
+      <button
+        type="button"
+        data-testid="active-file-import"
+        class="flex w-full items-center gap-2 border-t px-[14px] py-[11px] text-left text-[14px] font-extrabold"
+        style="color:{accent};border-color:#f1f3ef;"
+        disabled={busy}
+        onclick={importFile}
+      >
+        <span class="w-[14px] shrink-0 text-center">＋</span>
+        <span>{busy ? 'Importing…' : 'Import a file'}</span>
+      </button>
+    </div>
   {/if}
 </div>
