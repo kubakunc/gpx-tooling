@@ -3,20 +3,36 @@
   import RouteMap from '$lib/components/RouteMap.svelte';
   import MapBadge from '$lib/components/MapBadge.svelte';
   import Spinner from '$lib/components/Spinner.svelte';
+  import Toggle from '$lib/components/Toggle.svelte';
+  import type { TrackPoint } from '$lib/domain/entities/TrackPoint';
   import { toolThemes, rgba } from '$lib/toolThemes';
   import type { LoadedFile } from '$lib/stores/loadedFiles';
   import { loadedFiles, addFiles, removeFile, reorderFiles } from '$lib/stores/loadedFiles';
   import { fileService } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
-  import { mergeChronologically } from '$lib/domain/usecases/merge';
-  import { totalDistanceMeters, elevationGainMeters, durationSeconds } from '$lib/domain/usecases/stats';
-  import { formatKm, formatGain, formatDuration, exportName } from '$lib/domain/usecases/format';
-  import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
+  import {
+    totalDistanceMeters,
+    elevationGainMeters,
+    durationSeconds
+  } from '$lib/domain/usecases/stats';
+  import { formatKm, formatGain, formatDuration, formatCount, exportName } from '$lib/domain/usecases/format';
+  import {
+    analyzeMerge,
+    fileStartMs,
+    fileEndMs,
+    type MergeMode,
+    type MergeIssue
+  } from '$lib/domain/usecases/mergeEngine';
+  import { serializeGpxSegments } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
 
   const t = toolThemes.merge;
 
   let busy = $state(false);
+  let mode = $state<MergeMode>('smart');
+  let forceContinuous = $state(false);
+  // Per-file time shift (seconds), keyed by the file's current index.
+  let shifts = $state<Record<number, number>>({});
 
   // Preload an interstitial as soon as the user has files loaded, so it's ready
   // after export. Reactive (not onMount) to cover the open-empty → import flow;
@@ -27,12 +43,30 @@
 
   const rowBg = (i: number) => [t.icon, '#34d399', t.button][i % 3];
 
-  let merged = $derived(mergeChronologically($loadedFiles.map((f) => f.points)));
-  let mergedRoute = $derived(
-    merged.map((p) => ({ lat: p.latitude, lon: p.longitude }))
+  let result = $derived(
+    analyzeMerge(
+      $loadedFiles.map((f) => ({ name: f.name, points: f.points })),
+      { mode, forceContinuous, timeShiftSecondsByIndex: shifts }
+    )
   );
-  let totalKm = $derived(formatKm(totalDistanceMeters(merged)));
-  let totalGain = $derived(formatGain(elevationGainMeters(merged)));
+  let mapSegments = $derived(
+    result.segments.map((seg) => seg.map((p) => ({ lat: p.latitude, lon: p.longitude })))
+  );
+  let totalKm = $derived(formatKm(result.stats.distanceM));
+  let totalGain = $derived(formatGain(result.stats.gainM));
+
+  // Overlap issue (if any) keyed by the file index it applies to.
+  function overlapFor(i: number): MergeIssue | undefined {
+    return result.issues.find((iss) => iss.kind === 'overlap' && iss.fileIndex === i);
+  }
+
+  const issueColor: Record<MergeIssue['kind'], string> = {
+    overlap: '#f59e0b',
+    gap: '#3b82f6',
+    teleport: '#e11d48',
+    duplicate: '#8b5cf6',
+    unordered: '#6b7280'
+  };
 
   async function importMore() {
     if (busy) return;
@@ -53,7 +87,7 @@
     if (busy || $loadedFiles.length < 2) return;
     busy = true;
     try {
-      const xml = serializeGpx(merged, 'merged');
+      const xml = serializeGpxSegments(result.segments, 'merged');
       const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
       await fileService.exportAndShare(xml, name);
       showToast('Merged file exported', 'success');
@@ -66,16 +100,52 @@
     }
   }
 
-  function fileMeta(points: typeof merged): string {
+  function fileMeta(points: TrackPoint[]): string {
     return `${formatKm(totalDistanceMeters(points))} · ${formatGain(elevationGainMeters(points))} · ${formatDuration(durationSeconds(points))}`;
   }
 
-  // Toast has no action support, so confirm the removal with a plain toast
-  // rather than building an undo affordance the component can't render.
+  // Shift file `i` so its (shifted) start lands just after the previous file's
+  // (shifted) end — the one-tap "fix overlap" affordance.
+  function shiftAfterPrevious(i: number) {
+    if (i <= 0) return;
+    const cur = $loadedFiles[i];
+    const prev = $loadedFiles[i - 1];
+    if (!cur || !prev) return;
+    const curStart = fileStartMs(cur.points);
+    const prevEnd = fileEndMs(prev.points);
+    if (curStart === null || prevEnd === null) return;
+    const prevShift = shifts[i - 1] ?? 0;
+    const desiredStart = prevEnd + prevShift * 1000 + 1000; // 1s after prev end
+    const deltaSec = Math.round((desiredStart - curStart) / 1000);
+    shifts = { ...shifts, [i]: deltaSec };
+  }
+
+  function nudgeShift(i: number, deltaSec: number) {
+    shifts = { ...shifts, [i]: (shifts[i] ?? 0) + deltaSec };
+  }
+
+  function shiftLabel(sec: number): string {
+    const sign = sec >= 0 ? '+' : '−';
+    return `${sign}${formatDuration(Math.abs(sec))}`;
+  }
+
+  // Removing or reordering files invalidates index-keyed shifts; clear them so a
+  // shift never silently applies to the wrong file after the list changes.
+  function clearShifts() {
+    shifts = {};
+  }
+
   function removeWithToast(f: LoadedFile) {
     removeFile(f.id);
+    clearShifts();
     showToast(`Removed ${f.name}`, 'info');
   }
+
+  function reorder(from: number, to: number) {
+    reorderFiles(from, to);
+    clearShifts();
+  }
+
 </script>
 
 <div class="flex h-full flex-col">
@@ -104,7 +174,7 @@
         class="relative mx-6 mt-3 h-[340px] overflow-hidden rounded-[20px] border"
         style="background:#e8eee9;border-color:#dbe7df;"
       >
-        <RouteMap variant="merge" route={mergedRoute} zoomPosition="bottomleft" />
+        <RouteMap variant="merge" segments={mapSegments} zoomPosition="bottomleft" />
         <MapBadge position="left-3 top-3" extraClass="text-[11px] font-extrabold">
           <span style="color:{t.title};">Merged route</span>
         </MapBadge>
@@ -116,6 +186,102 @@
             <span class="text-[14px] font-extrabold" style="color:{t.title};">{totalGain}</span>
           </div>
         </MapBadge>
+      </div>
+
+      <!-- Mode + force-continuous controls -->
+      <div data-testid="merge-mode" class="flex items-center justify-between px-6 pt-4">
+        <div
+          class="flex overflow-hidden rounded-[12px] border text-[13px] font-bold"
+          style="border-color:#dfe6e2;"
+        >
+          <button
+            type="button"
+            data-testid="merge-mode-smart"
+            class="px-3 py-[7px]"
+            aria-pressed={mode === 'smart'}
+            style={mode === 'smart'
+              ? `background:${t.button};color:#fff;`
+              : 'background:#fff;color:#6b7077;'}
+            onclick={() => (mode = 'smart')}>Smart</button
+          >
+          <button
+            type="button"
+            data-testid="merge-mode-sequential"
+            class="px-3 py-[7px]"
+            aria-pressed={mode === 'sequential'}
+            style={mode === 'sequential'
+              ? `background:${t.button};color:#fff;`
+              : 'background:#fff;color:#6b7077;'}
+            onclick={() => (mode = 'sequential')}>Sequential</button
+          >
+        </div>
+        <button
+          type="button"
+          data-testid="merge-force-continuous"
+          class="flex items-center gap-2 bg-transparent p-0"
+          aria-pressed={forceContinuous}
+          onclick={() => (forceContinuous = !forceContinuous)}
+        >
+          <span class="text-[12px] font-semibold" style="color:#6b7077;">Force continuous</span>
+          <Toggle on={forceContinuous} accent={t.button} />
+        </button>
+      </div>
+      <div class="px-6 pt-1 text-[11px]" style="color:#9aa0a6;">
+        {forceContinuous ? 'One continuous segment (no splits).' : 'Split at gaps > 100 m.'}
+      </div>
+
+      <!-- Analysis panel -->
+      <div
+        data-testid="merge-analysis"
+        class="mx-6 mt-4 rounded-[18px] border bg-white p-4"
+        style="border-color:#eef0ec;box-shadow:0 5px 14px {rgba(t.button, 0.05)};"
+      >
+        <div class="grid grid-cols-5 gap-1 text-center">
+          {#each [['Distance', totalKm], ['Gain', totalGain], ['Duration', formatDuration(result.stats.durationS)]] as [label, value] (label)}
+            <div>
+              <div class="text-[13px] font-extrabold" style="color:{t.title};">{value}</div>
+              <div class="text-[10px] uppercase tracking-[0.08em]" style="color:#9aa0a6;">
+                {label}
+              </div>
+            </div>
+          {/each}
+          <div>
+            <div
+              data-testid="merge-stat-segments"
+              class="text-[13px] font-extrabold"
+              style="color:{t.title};"
+            >
+              {result.stats.segmentCount}
+            </div>
+            <div class="text-[10px] uppercase tracking-[0.08em]" style="color:#9aa0a6;">Segments</div>
+          </div>
+          <div>
+            <div
+              data-testid="merge-stat-points"
+              class="text-[13px] font-extrabold"
+              style="color:{t.title};"
+            >
+              {formatCount(result.stats.points)}
+            </div>
+            <div class="text-[10px] uppercase tracking-[0.08em]" style="color:#9aa0a6;">Points</div>
+          </div>
+        </div>
+
+        <div class="mt-3 flex flex-col gap-[6px] border-t pt-3" style="border-color:#f1f3f0;">
+          {#if result.issues.length === 0}
+            <div class="text-[12px]" style="color:#9aa0a6;">No issues detected.</div>
+          {:else}
+            {#each result.issues as issue, idx (idx)}
+              <div data-testid="merge-issue" class="flex items-start gap-2 text-[12px]">
+                <span
+                  class="mt-[5px] h-2 w-2 shrink-0 rounded-full"
+                  style="background:{issueColor[issue.kind]};"
+                ></span>
+                <span style="color:#5b6168;">{issue.message}</span>
+              </div>
+            {/each}
+          {/if}
+        </div>
       </div>
 
       <div class="flex items-center justify-between px-6 pt-4">
@@ -136,60 +302,103 @@
 
       <div class="flex flex-col gap-[10px] px-6 pb-4 pt-[10px]">
         {#each $loadedFiles as f, i (f.id)}
+          {@const overlap = overlapFor(i)}
+          {@const shift = shifts[i] ?? 0}
           <div
             data-testid="file-row"
-            class="flex items-center gap-[13px] rounded-[18px] border bg-white p-[13px]"
+            class="flex flex-col gap-[10px] rounded-[18px] border bg-white p-[13px]"
             style="border-color:#eef0ec;box-shadow:0 5px 14px {rgba(t.button, 0.05)};"
           >
-            <div
-              class="flex h-9 w-9 items-center justify-center rounded-[11px] text-[15px] font-extrabold text-white"
-              style="background:{rowBg(i)};"
-            >
-              {i + 1}
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="truncate text-[15px] font-bold text-ink">{f.name}</div>
-              <div class="text-[12px]" style="color:#8a9099;">{fileMeta(f.points)}</div>
-            </div>
-            <div class="flex items-center gap-2">
-              <div class="flex items-center gap-1">
+            <div class="flex items-center gap-[13px]">
+              <div
+                class="flex h-9 w-9 items-center justify-center rounded-[11px] text-[15px] font-extrabold text-white"
+                style="background:{rowBg(i)};"
+              >
+                {i + 1}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="truncate text-[15px] font-bold text-ink">{f.name}</div>
+                <div class="text-[12px]" style="color:#8a9099;">{fileMeta(f.points)}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
+                    style="background:#f1f3f0;color:{t.button};"
+                    aria-label="Move up"
+                    disabled={i === 0}
+                    onclick={() => reorder(i, i - 1)}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
+                    style="background:#f1f3f0;color:{t.button};"
+                    aria-label="Move down"
+                    disabled={i === $loadedFiles.length - 1}
+                    onclick={() => reorder(i, i + 1)}
+                  >
+                    ↓
+                  </button>
+                </div>
                 <button
                   type="button"
                   class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
-                  style="background:#f1f3f0;color:{t.button};"
-                  aria-label="Move up"
-                  disabled={i === 0}
-                  onclick={() => reorderFiles(i, i - 1)}
+                  style="background:#fef2f2;color:#e11d48;"
+                  aria-label="Remove file"
+                  onclick={() => removeWithToast(f)}
                 >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
-                  style="background:#f1f3f0;color:{t.button};"
-                  aria-label="Move down"
-                  disabled={i === $loadedFiles.length - 1}
-                  onclick={() => reorderFiles(i, i + 1)}
-                >
-                  ↓
+                  ✕
                 </button>
               </div>
-              <button
-                type="button"
-                class="flex h-10 w-10 items-center justify-center rounded-[11px] text-[15px]"
-                style="background:#fef2f2;color:#e11d48;"
-                aria-label="Remove file"
-                onclick={() => removeWithToast(f)}
-              >
-                ✕
-              </button>
             </div>
+
+            {#if overlap || shift !== 0}
+              <div
+                data-testid="merge-overlap-row"
+                class="flex flex-wrap items-center gap-2 border-t pt-[10px]"
+                style="border-color:#f5f0e6;"
+              >
+                {#if overlap}
+                  <span
+                    class="rounded-full px-2 py-[3px] text-[11px] font-bold"
+                    style="background:#fef3c7;color:#92400e;">Overlaps previous</span
+                  >
+                  <button
+                    type="button"
+                    data-testid="merge-shift"
+                    class="rounded-full px-3 py-[5px] text-[11px] font-extrabold text-white"
+                    style="background:{t.button};"
+                    onclick={() => shiftAfterPrevious(i)}
+                  >
+                    Shift after previous
+                  </button>
+                {/if}
+                <div class="flex items-center gap-1">
+                  <button
+                    type="button"
+                    aria-label="Shift earlier"
+                    class="flex h-7 w-7 items-center justify-center rounded-[9px] text-[14px]"
+                    style="background:#f1f3f0;color:{t.button};"
+                    onclick={() => nudgeShift(i, -5)}>−</button
+                  >
+                  <button
+                    type="button"
+                    aria-label="Shift later"
+                    class="flex h-7 w-7 items-center justify-center rounded-[9px] text-[14px]"
+                    style="background:#f1f3f0;color:{t.button};"
+                    onclick={() => nudgeShift(i, 5)}>＋</button
+                  >
+                  {#if shift !== 0}
+                    <span class="text-[11px] font-bold" style="color:#6b7077;">{shiftLabel(shift)}</span>
+                  {/if}
+                </div>
+              </div>
+            {/if}
           </div>
         {/each}
-      </div>
-
-      <div class="px-6 pb-4 text-[12px] leading-[1.5]" style="color:#8a9099;">
-        Files are stitched together by timestamp.
       </div>
     {/if}
   </div>
