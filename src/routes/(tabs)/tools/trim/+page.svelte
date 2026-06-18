@@ -11,7 +11,8 @@
   import { showToast } from '$lib/stores/toast';
   import { trimGpx } from '$lib/domain/usecases/trim';
   import { totalDistanceMeters, durationSeconds } from '$lib/domain/usecases/stats';
-  import { formatKm, formatDuration, exportName } from '$lib/domain/usecases/format';
+  import { formatDistance, formatDuration, exportName } from '$lib/domain/usecases/format';
+  import { settings } from '$lib/stores/settings';
   import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
@@ -48,7 +49,7 @@
   // Elapsed time up to the kept-segment boundaries, measured from the track start.
   let startTime = $derived(formatDuration(durationSeconds(points.slice(0, startIdx))));
   let endTime = $derived(formatDuration(durationSeconds(points.slice(0, endIdx))));
-  let keptLabel = $derived(`${formatKm(totalDistanceMeters(kept))} · ${formatDuration(durationSeconds(kept))}`);
+  let keptLabel = $derived(`${formatDistance(totalDistanceMeters(kept), $settings.units)} · ${formatDuration(durationSeconds(kept))}`);
 
   let profile = $derived(elevationProfilePoints(points, 340, 90));
 

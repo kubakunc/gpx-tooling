@@ -1,18 +1,51 @@
 /** Presentation helpers for domain stats (pure, locale-free). */
 
-/** Meters → "12.3 km". */
-export function formatKm(meters: number): string {
-  return `${(meters / 1000).toFixed(1)} km`;
+/** Unit system for displayed distances, elevations and speeds. */
+export type Units = 'metric' | 'imperial';
+
+const METERS_PER_MILE = 1609.344;
+const FEET_PER_METER = 3.28084;
+const KMH_PER_MPH = 1.609344;
+
+/**
+ * Meters → "12.3 km" (metric) / "7.6 mi" (imperial, m / 1609.344).
+ * Pure: the unit system is passed in, never read from a store.
+ */
+export function formatDistance(meters: number, units: Units): string {
+  return units === 'imperial'
+    ? `${(meters / METERS_PER_MILE).toFixed(1)} mi`
+    : `${(meters / 1000).toFixed(1)} km`;
 }
 
-/** Meters of gain → "+312 m". */
-export function formatGain(meters: number): string {
-  return `+${Math.round(meters)} m`;
+/**
+ * Meters of elevation → "312 m" (metric) / "1024 ft" (imperial, m * 3.28084).
+ * Pure: the unit system is passed in, never read from a store.
+ */
+export function formatElevation(meters: number, units: Units): string {
+  return units === 'imperial'
+    ? `${Math.round(meters * FEET_PER_METER)} ft`
+    : `${Math.round(meters)} m`;
 }
 
-/** km/h → "15.6 km/h"; null (untimed) → "—". */
-export function formatSpeed(kmh: number | null): string {
-  return kmh === null ? '—' : `${kmh.toFixed(1)} km/h`;
+/**
+ * Meters of gain → "+312 m" (metric) / "+1024 ft" (imperial, m * 3.28084).
+ * Pure: the unit system is passed in, never read from a store.
+ */
+export function formatGain(meters: number, units: Units): string {
+  return units === 'imperial'
+    ? `+${Math.round(meters * FEET_PER_METER)} ft`
+    : `+${Math.round(meters)} m`;
+}
+
+/**
+ * km/h → "15.6 km/h" (metric) / "9.7 mph" (imperial, kmh / 1.609344);
+ * null (untimed) → "—". Pure: the unit system is passed in.
+ */
+export function formatSpeed(kmh: number | null, units: Units): string {
+  if (kmh === null) return '—';
+  return units === 'imperial'
+    ? `${(kmh / KMH_PER_MPH).toFixed(1)} mph`
+    : `${kmh.toFixed(1)} km/h`;
 }
 
 /** Seconds → "H:MM:SS" (or "M:SS" under an hour). */

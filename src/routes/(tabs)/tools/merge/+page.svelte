@@ -15,7 +15,8 @@
     elevationGainMeters,
     durationSeconds
   } from '$lib/domain/usecases/stats';
-  import { formatKm, formatGain, formatDuration, formatCount, formatClock, formatSpeed, exportName } from '$lib/domain/usecases/format';
+  import { formatDistance, formatGain, formatDuration, formatCount, formatClock, formatSpeed, exportName } from '$lib/domain/usecases/format';
+  import { settings } from '$lib/stores/settings';
   import {
     analyzeMerge,
     fileStartMs,
@@ -52,8 +53,8 @@
   let mapSegments = $derived(
     result.segments.map((seg) => seg.map((p) => ({ lat: p.latitude, lon: p.longitude })))
   );
-  let totalKm = $derived(formatKm(result.stats.distanceM));
-  let totalGain = $derived(formatGain(result.stats.gainM));
+  let totalKm = $derived(formatDistance(result.stats.distanceM, $settings.units));
+  let totalGain = $derived(formatGain(result.stats.gainM, $settings.units));
 
   // Overlap issue (if any) keyed by the file index it applies to.
   function overlapFor(i: number): MergeIssue | undefined {
@@ -119,7 +120,7 @@
   }
 
   function fileMeta(points: TrackPoint[]): string {
-    return `${formatClock(fileStartMs(points))} · ${formatKm(totalDistanceMeters(points))} · ${formatGain(elevationGainMeters(points))} · ${formatDuration(durationSeconds(points))}`;
+    return `${formatClock(fileStartMs(points))} · ${formatDistance(totalDistanceMeters(points), $settings.units)} · ${formatGain(elevationGainMeters(points), $settings.units)} · ${formatDuration(durationSeconds(points))}`;
   }
 
   // Shift file `i` so its (shifted) start lands ~1s after the CHRONOLOGICAL
@@ -262,7 +263,7 @@
         style="border-color:#eef0ec;box-shadow:0 5px 14px {rgba(t.button, 0.05)};"
       >
         <div class="grid grid-cols-3 gap-x-1 gap-y-3 text-center">
-          {#each [['Distance', totalKm], ['Gain', totalGain], ['Duration', formatDuration(result.stats.durationS)], ['Avg speed', formatSpeed(result.stats.avgSpeedKmh)]] as [label, value] (label)}
+          {#each [['Distance', totalKm], ['Gain', totalGain], ['Duration', formatDuration(result.stats.durationS)], ['Avg speed', formatSpeed(result.stats.avgSpeedKmh, $settings.units)]] as [label, value] (label)}
             <div>
               <div
                 class="text-[13px] font-extrabold"

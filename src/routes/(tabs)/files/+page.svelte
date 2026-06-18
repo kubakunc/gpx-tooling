@@ -6,12 +6,13 @@
   import { fileService } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { totalDistanceMeters, elevationGainMeters, durationSeconds } from '$lib/domain/usecases/stats';
-  import { formatKm, formatGain, formatDuration } from '$lib/domain/usecases/format';
+  import { formatDistance, formatGain, formatDuration } from '$lib/domain/usecases/format';
+  import { settings } from '$lib/stores/settings';
 
   let busy = $state(false);
 
   function fileMeta(f: LoadedFile): string {
-    return `${formatKm(totalDistanceMeters(f.points))} · ${formatGain(elevationGainMeters(f.points))} · ${formatDuration(durationSeconds(f.points))}`;
+    return `${formatDistance(totalDistanceMeters(f.points), $settings.units)} · ${formatGain(elevationGainMeters(f.points), $settings.units)} · ${formatDuration(durationSeconds(f.points))}`;
   }
 
   async function importFiles() {

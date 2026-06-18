@@ -3,7 +3,8 @@
 
   const items = [
     { href: '/', glyph: '▦', label: 'Menu', match: (p: string) => p === '/' || p.startsWith('/tools') },
-    { href: '/files', glyph: '🗂', label: 'Files', match: (p: string) => p === '/files' }
+    { href: '/files', glyph: '🗂', label: 'Files', match: (p: string) => p === '/files' },
+    { href: '/settings', glyph: '⚙', label: 'Settings', match: (p: string) => p === '/settings' }
   ];
 
   let pathname = $derived(page.url.pathname);

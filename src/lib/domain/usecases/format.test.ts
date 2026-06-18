@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  formatKm,
+  formatDistance,
+  formatElevation,
   formatGain,
   formatDuration,
   formatBytes,
@@ -11,14 +12,39 @@ import {
 } from './format';
 
 describe('format helpers', () => {
-  it('formatKm', () => {
-    expect(formatKm(0)).toBe('0.0 km');
-    expect(formatKm(24300)).toBe('24.3 km');
+  it('formatDistance metric', () => {
+    expect(formatDistance(0, 'metric')).toBe('0.0 km');
+    expect(formatDistance(24300, 'metric')).toBe('24.3 km');
+    expect(formatDistance(12300, 'metric')).toBe('12.3 km');
   });
 
-  it('formatGain', () => {
-    expect(formatGain(311.6)).toBe('+312 m');
-    expect(formatGain(0)).toBe('+0 m');
+  it('formatDistance imperial (m / 1609.344)', () => {
+    expect(formatDistance(0, 'imperial')).toBe('0.0 mi');
+    // 12300 m / 1609.344 = 7.643… → 7.6 mi
+    expect(formatDistance(12300, 'imperial')).toBe('7.6 mi');
+    expect(formatDistance(1609.344, 'imperial')).toBe('1.0 mi');
+  });
+
+  it('formatElevation metric', () => {
+    expect(formatElevation(0, 'metric')).toBe('0 m');
+    expect(formatElevation(311.6, 'metric')).toBe('312 m');
+  });
+
+  it('formatElevation imperial (m * 3.28084)', () => {
+    expect(formatElevation(0, 'imperial')).toBe('0 ft');
+    // 312.1 m * 3.28084 = 1024.0… → 1024 ft
+    expect(formatElevation(312.1, 'imperial')).toBe('1024 ft');
+  });
+
+  it('formatGain metric', () => {
+    expect(formatGain(311.6, 'metric')).toBe('+312 m');
+    expect(formatGain(0, 'metric')).toBe('+0 m');
+  });
+
+  it('formatGain imperial (m * 3.28084)', () => {
+    expect(formatGain(0, 'imperial')).toBe('+0 ft');
+    // 312.1 m * 3.28084 ≈ 1024 ft
+    expect(formatGain(312.1, 'imperial')).toBe('+1024 ft');
   });
 
   it('formatDuration under and over an hour', () => {
@@ -73,9 +99,16 @@ describe('format helpers', () => {
     expect(exportName('', '', 'kml')).toBe('track.kml');
   });
 
-  it('formatSpeed renders km/h to one decimal, or "—" when null', () => {
-    expect(formatSpeed(15.64)).toBe('15.6 km/h');
-    expect(formatSpeed(0)).toBe('0.0 km/h');
-    expect(formatSpeed(null)).toBe('—');
+  it('formatSpeed metric renders km/h to one decimal, or "—" when null', () => {
+    expect(formatSpeed(15.64, 'metric')).toBe('15.6 km/h');
+    expect(formatSpeed(0, 'metric')).toBe('0.0 km/h');
+    expect(formatSpeed(null, 'metric')).toBe('—');
+  });
+
+  it('formatSpeed imperial renders mph (kmh / 1.609344), or "—" when null', () => {
+    // 15.64 / 1.609344 = 9.717… → 9.7 mph
+    expect(formatSpeed(15.64, 'imperial')).toBe('9.7 mph');
+    expect(formatSpeed(0, 'imperial')).toBe('0.0 mph');
+    expect(formatSpeed(null, 'imperial')).toBe('—');
   });
 });

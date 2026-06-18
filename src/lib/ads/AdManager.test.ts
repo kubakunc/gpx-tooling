@@ -73,7 +73,7 @@ function makeClock(start = 0) {
 }
 
 beforeEach(() => {
-  settings.set({ consentObtained: false, smoothing: 'medium' });
+  settings.set({ consentObtained: false, smoothing: 'medium', units: 'metric' });
   bannerHeight.set(0);
 });
 
