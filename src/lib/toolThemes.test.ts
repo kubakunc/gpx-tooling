@@ -1,10 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import { toolThemes, relatedApp, rgba, type ToolKey } from './toolThemes';
 
-const keys: ToolKey[] = ['merge', 'trim', 'convert', 'elevation', 'reduce', 'compare'];
+const keys: ToolKey[] = [
+  'merge',
+  'trim',
+  'convert',
+  'elevation',
+  'reduce',
+  'compare',
+  'reverse',
+  'strip',
+  'time',
+  'repair'
+];
 
 describe('toolThemes', () => {
-  it('has all six tool keys', () => {
+  it('has all tool keys', () => {
     for (const k of keys) {
       expect(toolThemes[k]).toBeDefined();
     }
@@ -63,6 +74,34 @@ describe('toolThemes', () => {
       title: '#3730a3',
       subtitle: '#7c83c4',
       button: '#4f46e5'
+    });
+    expect(toolThemes.reverse).toMatchObject({
+      tile: '#f0fdfa',
+      icon: '#14b8a6',
+      title: '#134e4a',
+      subtitle: '#5b9a92',
+      button: '#0d9488'
+    });
+    expect(toolThemes.strip).toMatchObject({
+      tile: '#f8fafc',
+      icon: '#64748b',
+      title: '#1e293b',
+      subtitle: '#7c8694',
+      button: '#475569'
+    });
+    expect(toolThemes.time).toMatchObject({
+      tile: '#fff7ed',
+      icon: '#f97316',
+      title: '#7c2d12',
+      subtitle: '#b07a5a',
+      button: '#ea580c'
+    });
+    expect(toolThemes.repair).toMatchObject({
+      tile: '#fff1f2',
+      icon: '#f43f5e',
+      title: '#881337',
+      subtitle: '#b46a7e',
+      button: '#e11d48'
     });
   });
 
