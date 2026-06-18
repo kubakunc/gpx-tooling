@@ -10,6 +10,11 @@ export function formatGain(meters: number): string {
   return `+${Math.round(meters)} m`;
 }
 
+/** km/h → "15.6 km/h"; null (untimed) → "—". */
+export function formatSpeed(kmh: number | null): string {
+  return kmh === null ? '—' : `${kmh.toFixed(1)} km/h`;
+}
+
 /** Seconds → "H:MM:SS" (or "M:SS" under an hour). */
 export function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));

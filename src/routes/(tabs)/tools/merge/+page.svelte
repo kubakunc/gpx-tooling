@@ -15,7 +15,7 @@
     elevationGainMeters,
     durationSeconds
   } from '$lib/domain/usecases/stats';
-  import { formatKm, formatGain, formatDuration, formatCount, formatClock, exportName } from '$lib/domain/usecases/format';
+  import { formatKm, formatGain, formatDuration, formatCount, formatClock, formatSpeed, exportName } from '$lib/domain/usecases/format';
   import {
     analyzeMerge,
     fileStartMs,
@@ -246,10 +246,16 @@
         class="mx-6 mt-4 rounded-[18px] border bg-white p-4"
         style="border-color:#eef0ec;box-shadow:0 5px 14px {rgba(t.button, 0.05)};"
       >
-        <div class="grid grid-cols-5 gap-1 text-center">
-          {#each [['Distance', totalKm], ['Gain', totalGain], ['Duration', formatDuration(result.stats.durationS)]] as [label, value] (label)}
+        <div class="grid grid-cols-3 gap-x-1 gap-y-3 text-center">
+          {#each [['Distance', totalKm], ['Gain', totalGain], ['Duration', formatDuration(result.stats.durationS)], ['Avg speed', formatSpeed(result.stats.avgSpeedKmh)]] as [label, value] (label)}
             <div>
-              <div class="text-[13px] font-extrabold" style="color:{t.title};">{value}</div>
+              <div
+                class="text-[13px] font-extrabold"
+                style="color:{t.title};"
+                data-testid={label === 'Avg speed' ? 'merge-stat-avgspeed' : undefined}
+              >
+                {value}
+              </div>
               <div class="text-[10px] uppercase tracking-[0.08em]" style="color:#9aa0a6;">
                 {label}
               </div>

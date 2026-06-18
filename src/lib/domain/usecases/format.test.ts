@@ -6,6 +6,7 @@ import {
   formatBytes,
   formatCount,
   formatClock,
+  formatSpeed,
   exportName
 } from './format';
 
@@ -70,5 +71,11 @@ describe('format helpers', () => {
   it('exportName supports an empty suffix (format conversion)', () => {
     expect(exportName('ride.gpx', '', 'tcx')).toBe('ride.tcx');
     expect(exportName('', '', 'kml')).toBe('track.kml');
+  });
+
+  it('formatSpeed renders km/h to one decimal, or "—" when null', () => {
+    expect(formatSpeed(15.64)).toBe('15.6 km/h');
+    expect(formatSpeed(0)).toBe('0.0 km/h');
+    expect(formatSpeed(null)).toBe('—');
   });
 });

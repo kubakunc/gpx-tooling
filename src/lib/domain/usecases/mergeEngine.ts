@@ -27,6 +27,8 @@ export interface MergeStats {
   distanceM: number;
   gainM: number;
   durationS: number;
+  /** Overall average speed (km/h) = distance / duration; null when untimed. */
+  avgSpeedKmh: number | null;
   points: number;
   segmentCount: number;
 }
@@ -266,10 +268,12 @@ export function analyzeMerge(
     timed.length >= 2
       ? Math.round((timed[timed.length - 1].time!.getTime() - timed[0].time!.getTime()) / 1000)
       : 0;
+  const distanceM = segmentsDistanceM(segments);
   const stats: MergeStats = {
-    distanceM: segmentsDistanceM(segments),
+    distanceM,
     gainM: elevationGainMeters(flat),
     durationS,
+    avgSpeedKmh: durationS > 0 ? (distanceM / durationS) * 3.6 : null,
     points: flat.length,
     segmentCount: segments.length
   };
