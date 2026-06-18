@@ -59,6 +59,10 @@
 
   const toLatLng = (p: LatLon): [number, number] => [p.lat, p.lon];
 
+  // Distinct colors cycled per merge segment so the breaks between segments are
+  // visually distinguishable. Leads with the emerald theme color.
+  const segmentColors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#e11d48', '#0ea5e9'];
+
   /**
    * Rebuild every overlay layer from the current props and refit the bounds.
    * Reads `route`/`keptRange`/`simplified`/`variant` so the $effect tracks them.
@@ -94,13 +98,16 @@
 
     if (variant === 'merge') {
       if (hasSegments) {
-        // One white-casing + emerald polyline PER segment so gaps stay visible
-        // (no line is drawn across a gap between segments).
-        for (const seg of segCoords) {
-          if (seg.length < 2) continue;
+        // One white-casing + colored polyline PER segment so gaps stay visible
+        // (no line is drawn across a gap) and each segment is its own color.
+        segCoords.forEach((seg, i) => {
+          if (seg.length < 2) return;
           Lib.polyline(seg, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(group);
-          Lib.polyline(seg, { color: '#10b981', weight: 5 }).addTo(group);
-        }
+          Lib.polyline(seg, {
+            color: segmentColors[i % segmentColors.length],
+            weight: 5
+          }).addTo(group);
+        });
       } else {
         // Single emerald route over a white casing.
         Lib.polyline(coords, { color: '#ffffff', weight: 8, opacity: 0.9 }).addTo(group);
