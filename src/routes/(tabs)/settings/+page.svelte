@@ -1,5 +1,11 @@
 <script lang="ts">
   import { adManager } from '$lib/ads/AdManager';
+  import { settings, setUnits, type Units } from '$lib/stores/settings';
+
+  const unitOptions: { value: Units; label: string }[] = [
+    { value: 'metric', label: 'Metric (km/h, km, m)' },
+    { value: 'imperial', label: 'Imperial (mph, mi, ft)' }
+  ];
 
   function manageConsent() {
     void adManager.reopenConsentForm();
@@ -13,11 +19,33 @@
 
 <div class="flex flex-col gap-[12px] px-6 pt-[10px]">
   <div class="rounded-[18px] border p-[18px]" style="background:#fff;border-color:#efece6;">
-    <div class="text-[15px] font-extrabold text-ink">Coming soon</div>
+    <div class="text-[15px] font-extrabold text-ink">Unit Preference</div>
     <p class="mt-[6px] text-[13px] leading-[1.55] text-ink-muted">
-      App preferences and calibration options arrive in a later phase.
+      Choose how distances, elevation and speed are displayed across every tool.
     </p>
+    <div class="mt-[14px] flex flex-col gap-[10px]">
+      {#each unitOptions as opt (opt.value)}
+        {@const active = $settings.units === opt.value}
+        <label
+          class="flex cursor-pointer items-center gap-[12px] rounded-[14px] border p-[13px]"
+          style="background:{active ? '#f5f3ee' : '#fff'};border-color:{active ? '#3b3a36' : '#efece6'};"
+        >
+          <input
+            type="radio"
+            name="units"
+            value={opt.value}
+            checked={active}
+            data-testid="units-{opt.value}"
+            class="h-[18px] w-[18px]"
+            style="accent-color:#3b3a36;"
+            onchange={() => setUnits(opt.value)}
+          />
+          <span class="text-[14px] font-extrabold text-ink">{opt.label}</span>
+        </label>
+      {/each}
+    </div>
   </div>
+
   <div class="rounded-[18px] border p-[18px]" style="background:#fff;border-color:#efece6;">
     <div class="text-[15px] font-extrabold text-ink">Privacy &amp; ads</div>
     <p class="mt-[6px] text-[13px] leading-[1.55] text-ink-muted">

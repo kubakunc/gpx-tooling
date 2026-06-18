@@ -243,4 +243,23 @@ describe('analyzeMerge', () => {
     expect(r.stats.durationS).toBe(0);
     expect(r.stats.points).toBe(2);
   });
+
+  it('computes avg speed = distance / duration (km/h), null when untimed', () => {
+    // Small steps (~44 m each, 30 s apart) so the track stays one segment.
+    const ride = [
+      tp(0, '2026-01-01T00:00:00Z'),
+      tp(0.0004, '2026-01-01T00:00:30Z'),
+      tp(0.0008, '2026-01-01T00:01:00Z')
+    ];
+    const r = analyzeMerge([{ name: 'a', points: ride }], { mode: 'smart' });
+    expect(r.segments).toHaveLength(1); // no gap/teleport split
+    expect(r.stats.avgSpeedKmh).not.toBeNull();
+    // consistent with the displayed distance & duration
+    expect(r.stats.avgSpeedKmh!).toBeCloseTo((r.stats.distanceM / r.stats.durationS) * 3.6, 5);
+    expect(r.stats.avgSpeedKmh!).toBeGreaterThan(0);
+    expect(r.stats.avgSpeedKmh!).toBeLessThan(30);
+
+    const untimed = analyzeMerge([{ name: 'u', points: [tp(0, null), tp(1, null)] }], { mode: 'smart' });
+    expect(untimed.stats.avgSpeedKmh).toBeNull();
+  });
 });

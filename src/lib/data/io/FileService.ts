@@ -39,6 +39,14 @@ export function ensureExportExt(name: string): string {
   return /\.(gpx|tcx|kml|fit)$/i.test(name) ? name : `${name}.gpx`;
 }
 
+/**
+ * Build the "Saved to …" success message for a file saved to device Documents.
+ * Pure helper so the message format is unit-testable without IO.
+ */
+export function savedToDeviceMessage(filename: string): string {
+  return `Saved to Documents/${filename}`;
+}
+
 /** Map any thrown value to a user-friendly message for a toast. */
 export function friendlyImportError(e: unknown): string {
   if (e instanceof ParseError) return `Could not read file: ${e.message}`;
@@ -175,6 +183,35 @@ export class FileService {
    */
   async shareTextFile(text: string, filename: string): Promise<void> {
     await this.writeAndShare(text, filename);
+  }
+
+  /**
+   * Save the given text to the device's Documents directory (native), or fall
+   * back to a Blob download (web). Returns the file `uri` on native, or '' on
+   * web. Errors are surfaced with friendly messages.
+   */
+  async saveToDevice(text: string, filename: string): Promise<string> {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        await Filesystem.writeFile({
+          path: filename,
+          data: text,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+          recursive: true
+        });
+        const { uri } = await Filesystem.getUri({
+          path: filename,
+          directory: Directory.Documents
+        });
+        return uri;
+      }
+      // Web fallback: reuse the existing Blob download.
+      this.download(text, filename);
+      return '';
+    } catch (e) {
+      throw new Error(friendlyImportError(e));
+    }
   }
 
   private async writeAndShare(text: string, name: string): Promise<void> {

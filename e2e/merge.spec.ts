@@ -57,6 +57,23 @@ test.describe('merge — import flow', () => {
     await importViaPicker(page, () => page.getByTestId('add-button').click(), 'ride-b.gpx');
     await expect(page.getByTestId('file-row')).toHaveCount(2);
     await expect(page.getByTestId('merge-export')).toBeEnabled();
+    // The "Save to device" secondary button mirrors the >=2-file guard.
+    await expect(page.getByTestId('merge-save')).toBeEnabled();
+  });
+
+  test('Save to device triggers a download on web', async ({ page }) => {
+    await page.goto('/tools/merge');
+    await importViaPicker(
+      page,
+      () => page.getByTestId('import-button').click(),
+      'ride-a.gpx',
+      'ride-b.gpx'
+    );
+    await expect(page.getByTestId('merge-save')).toBeEnabled();
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('merge-save').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.gpx$/);
   });
 });
 

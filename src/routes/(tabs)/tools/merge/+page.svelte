@@ -8,14 +8,15 @@
   import { toolThemes, rgba } from '$lib/toolThemes';
   import type { LoadedFile } from '$lib/stores/loadedFiles';
   import { loadedFiles, addFiles, removeFile, reorderFiles } from '$lib/stores/loadedFiles';
-  import { fileService } from '$lib/data/io/FileService';
+  import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import {
     totalDistanceMeters,
     elevationGainMeters,
     durationSeconds
   } from '$lib/domain/usecases/stats';
-  import { formatKm, formatGain, formatDuration, formatCount, formatClock, exportName } from '$lib/domain/usecases/format';
+  import { formatDistance, formatGain, formatDuration, formatCount, formatClock, formatSpeed, exportName } from '$lib/domain/usecases/format';
+  import { settings } from '$lib/stores/settings';
   import {
     analyzeMerge,
     fileStartMs,
@@ -52,8 +53,8 @@
   let mapSegments = $derived(
     result.segments.map((seg) => seg.map((p) => ({ lat: p.latitude, lon: p.longitude })))
   );
-  let totalKm = $derived(formatKm(result.stats.distanceM));
-  let totalGain = $derived(formatGain(result.stats.gainM));
+  let totalKm = $derived(formatDistance(result.stats.distanceM, $settings.units));
+  let totalGain = $derived(formatGain(result.stats.gainM, $settings.units));
 
   // Overlap issue (if any) keyed by the file index it applies to.
   function overlapFor(i: number): MergeIssue | undefined {
@@ -103,8 +104,23 @@
     }
   }
 
+  async function saveToDevice() {
+    if (busy || $loadedFiles.length < 2) return;
+    busy = true;
+    try {
+      const xml = serializeGpxSegments(result.segments, 'merged');
+      const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
+      await fileService.saveToDevice(xml, name);
+      showToast(savedToDeviceMessage(name), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
   function fileMeta(points: TrackPoint[]): string {
-    return `${formatClock(fileStartMs(points))} · ${formatKm(totalDistanceMeters(points))} · ${formatGain(elevationGainMeters(points))} · ${formatDuration(durationSeconds(points))}`;
+    return `${formatClock(fileStartMs(points))} · ${formatDistance(totalDistanceMeters(points), $settings.units)} · ${formatGain(elevationGainMeters(points), $settings.units)} · ${formatDuration(durationSeconds(points))}`;
   }
 
   // Shift file `i` so its (shifted) start lands ~1s after the CHRONOLOGICAL
@@ -246,10 +262,16 @@
         class="mx-6 mt-4 rounded-[18px] border bg-white p-4"
         style="border-color:#eef0ec;box-shadow:0 5px 14px {rgba(t.button, 0.05)};"
       >
-        <div class="grid grid-cols-5 gap-1 text-center">
-          {#each [['Distance', totalKm], ['Gain', totalGain], ['Duration', formatDuration(result.stats.durationS)]] as [label, value] (label)}
+        <div class="grid grid-cols-3 gap-x-1 gap-y-3 text-center">
+          {#each [['Distance', totalKm], ['Gain', totalGain], ['Duration', formatDuration(result.stats.durationS)], ['Avg speed', formatSpeed(result.stats.avgSpeedKmh, $settings.units)]] as [label, value] (label)}
             <div>
-              <div class="text-[13px] font-extrabold" style="color:{t.title};">{value}</div>
+              <div
+                class="text-[13px] font-extrabold"
+                style="color:{t.title};"
+                data-testid={label === 'Avg speed' ? 'merge-stat-avgspeed' : undefined}
+              >
+                {value}
+              </div>
               <div class="text-[10px] uppercase tracking-[0.08em]" style="color:#9aa0a6;">
                 {label}
               </div>
@@ -453,15 +475,26 @@
           Add another file to merge.
         </div>
       {/if}
-      <button
-        data-testid="merge-export"
-        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
-        style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
-        disabled={busy || $loadedFiles.length < 2}
-        onclick={mergeAndExport}
-      >
-        {#if busy}<Spinner /> Working…{:else}Merge &amp; export{/if}
-      </button>
+      <div class="flex gap-3">
+        <button
+          data-testid="merge-export"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
+          style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.35)};"
+          disabled={busy || $loadedFiles.length < 2}
+          onclick={mergeAndExport}
+        >
+          {#if busy}<Spinner /> Working…{:else}Merge &amp; export{/if}
+        </button>
+        <button
+          data-testid="merge-save"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
+          style="border-color:{t.button};color:{t.button};background:#fff;"
+          disabled={busy || $loadedFiles.length < 2}
+          onclick={saveToDevice}
+        >
+          {#if busy}<Spinner /> Working…{:else}Save to device{/if}
+        </button>
+      </div>
     </div>
   {/if}
 </div>

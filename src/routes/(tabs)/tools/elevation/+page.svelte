@@ -11,7 +11,8 @@
   import { smoothElevation, elevationFixLevelFromPercent } from '$lib/domain/usecases/smoothElevation';
   import { elevationGainMeters } from '$lib/domain/usecases/stats';
   import { elevationProfilePoints } from '$lib/domain/usecases/reduceMapping';
-  import { exportName } from '$lib/domain/usecases/format';
+  import { exportName, formatElevation } from '$lib/domain/usecases/format';
+  import { settings } from '$lib/stores/settings';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
   import { debounce } from '$lib/util/debounce';
   import type { TrackPoint } from '$lib/domain/entities/TrackPoint';
@@ -164,14 +165,14 @@
         <div class="mt-[10px] flex justify-between">
           <div>
             <div class="text-[11px]" style="color:#b08b4a;">Gain before</div>
-            <div data-testid="gain-before" class="text-[20px] font-extrabold line-through" style="color:#a8a29e;">{Math.round(gainBefore)} m</div>
+            <div data-testid="gain-before" class="text-[20px] font-extrabold line-through" style="color:#a8a29e;">{formatElevation(gainBefore, $settings.units)}</div>
           </div>
           <div class="text-right">
             <div class="flex items-center justify-end gap-1 text-[11px]" style="color:{t.button};">
               Corrected {#if calculating}<Spinner />{/if}
             </div>
             <div data-testid="gain-after" class="text-[20px] font-extrabold" style="color:{t.title};">
-              {calculating ? '…' : `${Math.round(gainAfter)} m`}
+              {calculating ? '…' : formatElevation(gainAfter, $settings.units)}
             </div>
           </div>
         </div>
