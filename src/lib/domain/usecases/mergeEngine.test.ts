@@ -5,7 +5,8 @@ import {
   fileEndMs,
   detectTimeOverlaps,
   dedupePoints,
-  splitIntoSegments
+  splitIntoSegments,
+  analyzeMerge
 } from './mergeEngine';
 import type { TrackPoint } from '../entities/TrackPoint';
 
@@ -125,5 +126,87 @@ describe('splitIntoSegments', () => {
       { ...tp(0, '2026-01-01T00:00:30Z'), latitude: 0.0001 }
     ];
     expect(splitIntoSegments(clean, opts).segments).toHaveLength(1);
+  });
+});
+
+describe('analyzeMerge', () => {
+  it('smart mode orders files by start time and reports overlap', () => {
+    const later = [tp(1, '2026-01-01T00:10:00Z'), tp(2, '2026-01-01T00:20:00Z')];
+    const earlier = [tp(3, '2026-01-01T00:00:00Z'), tp(4, '2026-01-01T00:05:00Z')];
+    const r = analyzeMerge(
+      [
+        { name: 'b', points: later },
+        { name: 'a', points: earlier }
+      ],
+      { mode: 'smart' }
+    );
+    // earlier file's first point comes first
+    expect(r.segments[0][0].latitude).toBe(3);
+    expect(r.stats.points).toBe(4);
+  });
+  it('sequential mode keeps the given order regardless of time', () => {
+    const a = [tp(1, '2026-01-01T00:10:00Z')];
+    const b = [tp(2, '2026-01-01T00:00:00Z')];
+    const r = analyzeMerge(
+      [
+        { name: 'a', points: a },
+        { name: 'b', points: b }
+      ],
+      { mode: 'sequential' }
+    );
+    expect(r.segments.flat().map((p) => p.latitude)).toEqual([1, 2]);
+  });
+  it('applies a per-file time shift before ordering', () => {
+    const a = [tp(1, '2026-01-01T00:00:00Z')];
+    const b = [tp(2, '2026-01-01T00:00:30Z')];
+    // shift b back by 60s so it precedes a
+    const r = analyzeMerge(
+      [
+        { name: 'a', points: a },
+        { name: 'b', points: b }
+      ],
+      { mode: 'smart', timeShiftSecondsByIndex: { 1: -60 } }
+    );
+    expect(r.segments.flat()[0].latitude).toBe(2);
+  });
+  it('distance excludes cross-gap jumps (per-segment sum)', () => {
+    const seg1 = [
+      tp(0, '2026-01-01T00:00:00Z'),
+      { ...tp(0, '2026-01-01T00:00:30Z'), latitude: 0.0001 }
+    ];
+    const farFile = [{ ...tp(0, '2026-01-01T01:00:00Z'), latitude: 5 }]; // ~550km away → gap
+    const r = analyzeMerge(
+      [
+        { name: 'a', points: seg1 },
+        { name: 'b', points: farFile }
+      ],
+      { mode: 'smart' }
+    );
+    expect(r.segments.length).toBe(2);
+    expect(r.stats.distanceM).toBeLessThan(1000); // the 550km jump is NOT counted
+  });
+  it('reports removed duplicates and computes gain/duration', () => {
+    const a = [
+      { latitude: 0, longitude: 0, elevation: 100, time: new Date('2026-01-01T00:00:00Z'), sensors: {} },
+      { latitude: 0, longitude: 0, elevation: 100, time: new Date('2026-01-01T00:00:00Z'), sensors: {} }, // dup
+      { latitude: 0.0001, longitude: 0, elevation: 150, time: new Date('2026-01-01T00:00:30Z'), sensors: {} }
+    ];
+    const r = analyzeMerge([{ name: 'a', points: a }], { mode: 'smart' });
+    expect(r.issues.some((i) => i.kind === 'duplicate' && i.count === 1)).toBe(true);
+    expect(r.stats.gainM).toBe(50);
+    expect(r.stats.durationS).toBe(30);
+  });
+  it('handles untimed files (appended in order, zero duration)', () => {
+    const a = [{ latitude: 0, longitude: 0, elevation: null, time: null, sensors: {} }];
+    const b = [{ latitude: 0.0001, longitude: 0, elevation: null, time: null, sensors: {} }];
+    const r = analyzeMerge(
+      [
+        { name: 'a', points: a },
+        { name: 'b', points: b }
+      ],
+      { mode: 'smart' }
+    );
+    expect(r.stats.durationS).toBe(0);
+    expect(r.stats.points).toBe(2);
   });
 });

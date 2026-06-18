@@ -169,3 +169,96 @@ export function splitIntoSegments(
   segments.push(cur);
   return { segments, issues };
 }
+
+function segmentsDistanceM(segments: TrackPoint[][]): number {
+  let sum = 0;
+  for (const seg of segments) {
+    for (let i = 1; i < seg.length; i++) {
+      sum += haversineMeters(
+        seg[i - 1].latitude,
+        seg[i - 1].longitude,
+        seg[i].latitude,
+        seg[i].longitude
+      );
+    }
+  }
+  return sum;
+}
+
+export function analyzeMerge(
+  files: { name: string; points: TrackPoint[] }[],
+  options: MergeOptions
+): MergeResult {
+  const shifts = options.timeShiftSecondsByIndex ?? {};
+  // 1. Apply per-file shifts (keep original index for ordering/labels).
+  const shifted = files.map((f, i) => ({
+    index: i,
+    name: f.name,
+    points: shiftPoints(f.points, shifts[i] ?? 0)
+  }));
+
+  // 2. Order files.
+  let ordered = shifted;
+  if (options.mode === 'smart') {
+    ordered = shifted
+      .map((f) => ({ f, start: fileStartMs(f.points) }))
+      .sort((a, b) => {
+        const sa = a.start ?? Infinity;
+        const sb = b.start ?? Infinity;
+        if (sa !== sb) return sa - sb;
+        return a.f.index - b.f.index; // stable
+      })
+      .map((e) => e.f);
+  }
+
+  // 3. Overlap issues (on the ordered, shifted files).
+  const overlapIssues = detectTimeOverlaps(ordered.map((f) => f.points));
+
+  // 4. Concatenate (in smart mode, sort within each file by time for safety).
+  const stream: TrackPoint[] = [];
+  for (const f of ordered) {
+    const pts =
+      options.mode === 'smart'
+        ? [...f.points].sort((a, b) => (a.time && b.time ? a.time.getTime() - b.time.getTime() : 0))
+        : f.points;
+    stream.push(...pts);
+  }
+
+  // 5. Dedupe.
+  const { points: deduped, removed } = dedupePoints(stream);
+  const dupIssues: MergeIssue[] =
+    removed > 0
+      ? [
+          {
+            kind: 'duplicate',
+            count: removed,
+            message: `Removed ${removed} duplicate point${removed === 1 ? '' : 's'}.`
+          }
+        ]
+      : [];
+
+  // 6. Split into segments.
+  const { segments, issues: splitIssues } = splitIntoSegments(deduped, {
+    gapMeters: options.gapMeters,
+    maxSpeedMps: options.maxSpeedMps,
+    timeGapSeconds: options.timeGapSeconds,
+    forceContinuous: options.forceContinuous
+  });
+
+  // 7. Stats.
+  const flat = segments.flat();
+  const timed = flat.filter((p) => p.time);
+  const durationS =
+    timed.length >= 2
+      ? Math.round((timed[timed.length - 1].time!.getTime() - timed[0].time!.getTime()) / 1000)
+      : 0;
+  const stats: MergeStats = {
+    distanceM: segmentsDistanceM(segments),
+    gainM: elevationGainMeters(flat),
+    durationS,
+    points: flat.length,
+    segmentCount: segments.length
+  };
+
+  return { segments, issues: [...overlapIssues, ...dupIssues, ...splitIssues], stats };
+}
