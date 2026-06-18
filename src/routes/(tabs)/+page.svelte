@@ -103,11 +103,7 @@
   {/each}
 </div>
 
-<div class="px-6 pb-6 pt-[14px]">
-  <div class="mb-[11px] flex items-center gap-[10px]">
-    <div class="text-[10px] font-bold uppercase tracking-[0.14em] text-ink-faint">Related app</div>
-    <div class="h-px flex-1" style="background:#ece8e1;"></div>
-  </div>
+<div class="px-6 pb-6 pt-[16px]">
   <button
     type="button"
     onclick={openStravaExporter}
