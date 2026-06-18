@@ -196,6 +196,40 @@ describe('analyzeMerge', () => {
     expect(r.stats.gainM).toBe(50);
     expect(r.stats.durationS).toBe(30);
   });
+  it('smart mode: overlap issue carries the ORIGINAL file index, not the ordered position', () => {
+    // Files passed in reverse-time order. Index 0 = later file, index 1 = earlier
+    // file. Smart mode reorders so the earlier file (index 1) is first; the later
+    // file (index 0) then overlaps. The overlap issue must point at original index 0.
+    const later = [tp(1, '2026-01-01T00:05:00Z'), tp(2, '2026-01-01T00:20:00Z')]; // index 0
+    const earlier = [tp(3, '2026-01-01T00:00:00Z'), tp(4, '2026-01-01T00:10:00Z')]; // index 1
+    const r = analyzeMerge(
+      [
+        { name: 'later', points: later },
+        { name: 'earlier', points: earlier }
+      ],
+      { mode: 'smart' }
+    );
+    // Ordering: earlier (orig idx 1) then later (orig idx 0).
+    expect(r.orderedIndices).toEqual([1, 0]);
+    const overlap = r.issues.find((i) => i.kind === 'overlap');
+    expect(overlap).toBeDefined();
+    // The overlapping file is the LATER one whose ORIGINAL index is 0.
+    expect(overlap!.fileIndex).toBe(0);
+    // Message cites the original file number (originalIndex + 1 = 1).
+    expect(overlap!.message).toMatch(/^File 1 overlaps/);
+  });
+  it('sequential mode: orderedIndices is identity order', () => {
+    const a = [tp(1, '2026-01-01T00:00:00Z')];
+    const b = [tp(2, '2026-01-01T00:10:00Z')];
+    const r = analyzeMerge(
+      [
+        { name: 'a', points: a },
+        { name: 'b', points: b }
+      ],
+      { mode: 'sequential' }
+    );
+    expect(r.orderedIndices).toEqual([0, 1]);
+  });
   it('handles untimed files (appended in order, zero duration)', () => {
     const a = [{ latitude: 0, longitude: 0, elevation: null, time: null, sensors: {} }];
     const b = [{ latitude: 0.0001, longitude: 0, elevation: null, time: null, sensors: {} }];

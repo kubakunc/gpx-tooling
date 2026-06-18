@@ -5,6 +5,7 @@ import {
   formatDuration,
   formatBytes,
   formatCount,
+  formatClock,
   exportName
 } from './format';
 
@@ -36,6 +37,13 @@ describe('format helpers', () => {
     expect(formatCount(8412)).toBe('8 412');
     expect(formatCount(240)).toBe('240');
     expect(formatCount(1000000)).toBe('1 000 000');
+  });
+
+  it('formatClock returns local HH:MM, or "no time" when null', () => {
+    // Local-time string (no Z) so the rendered HH:MM is timezone-independent.
+    expect(formatClock(new Date('2026-01-01T08:05:00').getTime())).toBe('08:05');
+    expect(formatClock(new Date('2026-01-01T23:09:00').getTime())).toBe('23:09');
+    expect(formatClock(null)).toBe('no time');
   });
 
   it('exportName strips source ext and appends suffix', () => {

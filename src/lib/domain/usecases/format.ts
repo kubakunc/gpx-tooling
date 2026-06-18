@@ -42,6 +42,19 @@ export function exportName(sourceName: string, suffix: string, ext = 'gpx'): str
   return suffix ? `${base}-${suffix}.${ext}` : `${base}.${ext}`;
 }
 
+/**
+ * Epoch milliseconds → local clock "HH:MM" (24h, zero-padded). Returns "no time"
+ * when the timestamp is null (untimed file).
+ *   formatClock(Date.parse('2026-01-01T08:05:00')) → "08:05"
+ *   formatClock(null)                              → "no time"
+ */
+export function formatClock(ms: number | null): string {
+  if (ms === null) return 'no time';
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** Integer → grouped with thin spaces, e.g. 8412 → "8 412". */
 export function formatCount(n: number): string {
   return Math.round(n)

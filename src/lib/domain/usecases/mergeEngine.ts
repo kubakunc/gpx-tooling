@@ -14,7 +14,7 @@ export interface MergeOptions {
 }
 
 export interface MergeIssue {
-  kind: 'overlap' | 'gap' | 'teleport' | 'duplicate' | 'unordered';
+  kind: 'overlap' | 'gap' | 'teleport' | 'duplicate';
   message: string;
   fileIndex?: number;
   meters?: number;
@@ -35,6 +35,8 @@ export interface MergeResult {
   segments: TrackPoint[][];
   issues: MergeIssue[];
   stats: MergeStats;
+  /** The ORIGINAL file indices in the order they were merged. */
+  orderedIndices: number[];
 }
 
 export function shiftPoints(points: TrackPoint[], seconds: number): TrackPoint[] {
@@ -211,8 +213,20 @@ export function analyzeMerge(
       .map((e) => e.f);
   }
 
-  // 3. Overlap issues (on the ordered, shifted files).
-  const overlapIssues = detectTimeOverlaps(ordered.map((f) => f.points));
+  const orderedIndices = ordered.map((f) => f.index);
+
+  // 3. Overlap issues (on the ordered, shifted files). detectTimeOverlaps reports
+  // fileIndex as a position within the ORDERED array; remap each to the ORIGINAL
+  // file index and rebuild the "File N" label from that original index.
+  const overlapIssues = detectTimeOverlaps(ordered.map((f) => f.points)).map((iss) => {
+    const orderedPos = iss.fileIndex ?? 0;
+    const originalIndex = orderedIndices[orderedPos];
+    return {
+      ...iss,
+      fileIndex: originalIndex,
+      message: iss.message.replace(/^File \d+/, `File ${originalIndex + 1}`)
+    };
+  });
 
   // 4. Concatenate (in smart mode, sort within each file by time for safety).
   const stream: TrackPoint[] = [];
@@ -260,5 +274,10 @@ export function analyzeMerge(
     segmentCount: segments.length
   };
 
-  return { segments, issues: [...overlapIssues, ...dupIssues, ...splitIssues], stats };
+  return {
+    segments,
+    issues: [...overlapIssues, ...dupIssues, ...splitIssues],
+    stats,
+    orderedIndices
+  };
 }
