@@ -15,8 +15,10 @@
     keptRange?: [number, number];
     /** Reduce: the simplified subset to overlay. */
     simplified?: LatLon[];
+    /** Corner for the zoom (+/-) control; placed clear of the screen's badges. */
+    zoomPosition?: 'topleft' | 'topright' | 'bottomleft' | 'bottomright';
   }
-  let { variant, route, keptRange, simplified }: Props = $props();
+  let { variant, route, keptRange, simplified, zoomPosition = 'topright' }: Props = $props();
 
   let el: HTMLDivElement;
   let map: LeafletMap | null = null;
@@ -25,6 +27,10 @@
   let overlay: LayerGroup | null = null;
   // Cached Leaflet module so redraw() can run synchronously after onMount.
   let L: typeof import('leaflet') | null = null;
+  // Bounds-key of the route last auto-fitted. We only fitBounds when the route
+  // itself changes — NOT on keptRange/simplified updates — so the user's manual
+  // zoom/pan is preserved while dragging sliders.
+  let lastFitKey = '';
 
   // Exact demo route ported from the design's support.js — fallback when no
   // real route is supplied so unwired states still look right.
@@ -113,12 +119,18 @@
       simp.forEach((p) => dot(p, '#6d28d9', '#fff', 4));
     }
 
+    // Only auto-fit when the underlying route changes; otherwise keep the user's
+    // current zoom/pan (e.g. while dragging the trim/reduce sliders).
+    const fitKey = `${coords.length}|${coords[0]?.join(',')}|${coords[coords.length - 1]?.join(',')}`;
+    const shouldFit = fitKey !== lastFitKey;
+    lastFitKey = fitKey;
+
     // Defer measuring until the container's entry layout settles.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (!map) return;
         map.invalidateSize();
-        map.fitBounds(Lib.latLngBounds(coords), { padding: [22, 22] });
+        if (shouldFit) map.fitBounds(Lib.latLngBounds(coords), { padding: [22, 22] });
       });
     });
   }
@@ -130,18 +142,21 @@
     if (map || !el) return;
 
     const opts = {
+      // Fully interactive: pan + pinch/scroll/double-tap zoom. The +/- control is
+      // added separately so it can be positioned clear of the corner badges.
       zoomControl: false,
-      dragging: false,
-      scrollWheelZoom: false,
-      doubleClickZoom: false,
-      boxZoom: false,
-      keyboard: false,
-      touchZoom: false,
+      dragging: true,
+      scrollWheelZoom: true,
+      doubleClickZoom: true,
+      boxZoom: true,
+      keyboard: true,
+      touchZoom: true,
       attributionControl: true
     };
 
     map = L.map(el, opts);
     map.attributionControl.setPrefix(false);
+    L.control.zoom({ position: zoomPosition }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'

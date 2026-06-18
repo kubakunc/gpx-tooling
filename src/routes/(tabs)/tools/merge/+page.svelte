@@ -101,10 +101,10 @@
       </div>
     {:else}
       <div
-        class="relative mx-6 mt-3 h-[158px] overflow-hidden rounded-[20px] border"
+        class="relative mx-6 mt-3 h-[340px] overflow-hidden rounded-[20px] border"
         style="background:#e8eee9;border-color:#dbe7df;"
       >
-        <RouteMap variant="merge" route={mergedRoute} />
+        <RouteMap variant="merge" route={mergedRoute} zoomPosition="bottomleft" />
         <MapBadge position="left-3 top-3" extraClass="text-[11px] font-extrabold">
           <span style="color:{t.title};">Merged route</span>
         </MapBadge>
