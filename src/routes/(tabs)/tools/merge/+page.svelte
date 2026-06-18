@@ -15,7 +15,7 @@
     elevationGainMeters,
     durationSeconds
   } from '$lib/domain/usecases/stats';
-  import { formatKm, formatGain, formatDuration, formatCount, exportName } from '$lib/domain/usecases/format';
+  import { formatKm, formatGain, formatDuration, formatCount, formatClock, exportName } from '$lib/domain/usecases/format';
   import {
     analyzeMerge,
     fileStartMs,
@@ -64,9 +64,12 @@
     overlap: '#f59e0b',
     gap: '#3b82f6',
     teleport: '#e11d48',
-    duplicate: '#8b5cf6',
-    unordered: '#6b7280'
+    duplicate: '#8b5cf6'
   };
+
+  // Split issues into action-needed (overlap) vs auto-handled (gap/teleport/duplicate).
+  let attentionIssues = $derived(result.issues.filter((iss) => iss.kind === 'overlap'));
+  let handledIssues = $derived(result.issues.filter((iss) => iss.kind !== 'overlap'));
 
   async function importMore() {
     if (busy) return;
@@ -101,21 +104,25 @@
   }
 
   function fileMeta(points: TrackPoint[]): string {
-    return `${formatKm(totalDistanceMeters(points))} · ${formatGain(elevationGainMeters(points))} · ${formatDuration(durationSeconds(points))}`;
+    return `${formatClock(fileStartMs(points))} · ${formatKm(totalDistanceMeters(points))} · ${formatGain(elevationGainMeters(points))} · ${formatDuration(durationSeconds(points))}`;
   }
 
-  // Shift file `i` so its (shifted) start lands just after the previous file's
-  // (shifted) end — the one-tap "fix overlap" affordance.
+  // Shift file `i` so its (shifted) start lands ~1s after the CHRONOLOGICAL
+  // predecessor's (shifted) end — the one-tap "fix overlap" affordance. In smart
+  // mode the predecessor is the file ordered just before `i` per orderedIndices,
+  // not the list neighbor.
   function shiftAfterPrevious(i: number) {
-    if (i <= 0) return;
+    const orderPos = result.orderedIndices.indexOf(i);
+    if (orderPos <= 0) return; // first in order (or not found) → nothing to do
+    const prevIndex = result.orderedIndices[orderPos - 1];
     const cur = $loadedFiles[i];
-    const prev = $loadedFiles[i - 1];
+    const prev = $loadedFiles[prevIndex];
     if (!cur || !prev) return;
     const curStart = fileStartMs(cur.points);
     const prevEnd = fileEndMs(prev.points);
     if (curStart === null || prevEnd === null) return;
-    const prevShift = shifts[i - 1] ?? 0;
-    const desiredStart = prevEnd + prevShift * 1000 + 1000; // 1s after prev end
+    const prevShift = shifts[prevIndex] ?? 0;
+    const desiredStart = prevEnd + prevShift * 1000 + 1000; // 1s after prev shifted end
     const deltaSec = Math.round((desiredStart - curStart) / 1000);
     shifts = { ...shifts, [i]: deltaSec };
   }
@@ -226,6 +233,9 @@
           <Toggle on={forceContinuous} accent={t.button} />
         </button>
       </div>
+      <div data-testid="merge-mode-caption" class="px-6 pt-1 text-[11px]" style="color:#9aa0a6;">
+        {mode === 'smart' ? 'Auto-orders files by start time.' : 'Keeps your order above.'}
+      </div>
       <div class="px-6 pt-1 text-[11px]" style="color:#9aa0a6;">
         {forceContinuous ? 'One continuous segment (no splits).' : 'Split at gaps > 100 m.'}
       </div>
@@ -267,19 +277,48 @@
           </div>
         </div>
 
-        <div class="mt-3 flex flex-col gap-[6px] border-t pt-3" style="border-color:#f1f3f0;">
+        <div class="mt-3 flex flex-col gap-[10px] border-t pt-3" style="border-color:#f1f3f0;">
           {#if result.issues.length === 0}
             <div class="text-[12px]" style="color:#9aa0a6;">No issues detected.</div>
           {:else}
-            {#each result.issues as issue, idx (idx)}
-              <div data-testid="merge-issue" class="flex items-start gap-2 text-[12px]">
-                <span
-                  class="mt-[5px] h-2 w-2 shrink-0 rounded-full"
-                  style="background:{issueColor[issue.kind]};"
-                ></span>
-                <span style="color:#5b6168;">{issue.message}</span>
+            {#if attentionIssues.length > 0}
+              <div class="flex flex-col gap-[6px]">
+                <div
+                  class="text-[10px] font-bold uppercase tracking-[0.08em]"
+                  style="color:#92400e;"
+                >
+                  Needs your attention
+                </div>
+                {#each attentionIssues as issue, idx (idx)}
+                  <div data-testid="merge-issue" class="flex items-start gap-2 text-[12px]">
+                    <span
+                      class="mt-[5px] h-2 w-2 shrink-0 rounded-full"
+                      style="background:{issueColor[issue.kind]};"
+                    ></span>
+                    <span style="color:#5b6168;">{issue.message}</span>
+                  </div>
+                {/each}
               </div>
-            {/each}
+            {/if}
+            {#if handledIssues.length > 0}
+              <div class="flex flex-col gap-[6px]">
+                <div
+                  class="text-[10px] font-bold uppercase tracking-[0.08em]"
+                  style="color:#9aa0a6;"
+                >
+                  Handled automatically
+                </div>
+                {#each handledIssues as issue, idx (idx)}
+                  <div data-testid="merge-issue" class="flex items-start gap-2 text-[12px]">
+                    <span
+                      class="mt-[5px] h-2 w-2 shrink-0 rounded-full"
+                      style="background:{issueColor[issue.kind]};"
+                    ></span>
+                    <span style="color:#5b6168;">{issue.message}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
           {/if}
         </div>
       </div>
@@ -355,7 +394,7 @@
               </div>
             </div>
 
-            {#if overlap || shift !== 0}
+            {#if i > 0}
               <div
                 data-testid="merge-overlap-row"
                 class="flex flex-wrap items-center gap-2 border-t pt-[10px]"
@@ -392,7 +431,11 @@
                     onclick={() => nudgeShift(i, 5)}>＋</button
                   >
                   {#if shift !== 0}
-                    <span class="text-[11px] font-bold" style="color:#6b7077;">{shiftLabel(shift)}</span>
+                    <span
+                      class="text-[11px] font-bold"
+                      style="color:#6b7077;"
+                      aria-live="polite">{shiftLabel(shift)}</span
+                    >
                   {/if}
                 </div>
               </div>
