@@ -39,15 +39,31 @@ await page.waitForTimeout(1800);
 await settle();
 await shot('02-merge.png');
 
-// From here, navigate ONLY client-side so the store survives.
+// From here, navigate ONLY client-side so the loaded files survive.
 await toHub(); await settle(700); await shot('01-hub.png');
-await toTool('Repair file'); await settle(); await shot('03-repair.png');
-await toHub(); await settle(500);
-await toTool('Trim track'); await settle(); await shot('04-trim.png');
-await toHub(); await settle(500);
-await toTool('Compare tracks'); await settle(); await shot('05-compare.png');
-await toHub(); await settle(500);
-await toTool('Convert'); await settle(700); await shot('06-convert.png');
+
+// Every tool (the merge shot above is 02). map-bearing tools get longer settle.
+const tools = [
+  ['Trim track', '03-trim.png'],
+  ['Convert', '04-convert.png'],
+  ['Elevation fix', '05-elevation.png'],
+  ['Reduce points', '06-reduce.png'],
+  ['Compare tracks', '07-compare.png'],
+  ['Reverse track', '08-reverse.png'],
+  ['Strip & minify', '09-strip.png'],
+  ['Time & speed', '10-time.png'],
+  ['Repair file', '11-repair.png']
+];
+for (const [name, file] of tools) {
+  await toTool(name); await settle(); await shot(file);
+  await toHub(); await settle(500);
+}
+
+// Files + Settings via the top-right menu (client-side).
+const openMenu = () => page.getByTestId('nav-toggle').click();
+await openMenu(); await page.getByTestId('nav-files').click(); await settle(700); await shot('12-files.png');
+await toHub(); await settle(400);
+await openMenu(); await page.getByTestId('nav-settings').click(); await settle(600); await shot('13-settings.png');
 
 await browser.close();
 console.log('done');
