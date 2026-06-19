@@ -8,3 +8,9 @@ Generated from the Claude Design "GPX Suite - Store Assets" file.
 
 Regenerate the graphics: `node store-assets/render.mjs` (uses the Playwright Chromium).
 App screenshots (Merge/Repair/Trim/etc.) are captured from the running app, not here.
+
+## App screenshots (gallery)
+`screenshots/01-hub.png` … `06-convert.png` — 1170×2340 (2:1), captured from the real
+built app via Playwright (`node store-assets/screenshots.mjs`, needs `npm run preview` running),
+using the synthetic demo rides in `fixtures/` (no personal data; regenerate with
+`node store-assets/fixtures/gen.mjs`).
