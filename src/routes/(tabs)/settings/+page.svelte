@@ -24,7 +24,7 @@
 </script>
 
 <div class="px-6 pb-2 pt-[18px]">
-  <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Suite</div>
+  <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Editor</div>
   <h1 class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Settings</h1>
 </div>
 
@@ -60,7 +60,7 @@
   <div class="rounded-[18px] border p-[18px]" style="background:#fff;border-color:#efece6;">
     <div class="text-[15px] font-extrabold text-ink">Privacy &amp; ads</div>
     <p class="mt-[6px] text-[13px] leading-[1.55] text-ink-muted">
-      GPX Suite is free and supported by ads. You can review or change your data
+      GPX Editor is free and supported by ads. You can review or change your data
       consent choices at any time.
     </p>
     <button

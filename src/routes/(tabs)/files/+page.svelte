@@ -39,7 +39,7 @@
 
 <div class="flex h-full flex-col">
   <div class="px-6 pb-2 pt-[18px]">
-    <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Suite</div>
+    <div class="text-[12px] font-bold uppercase tracking-[0.14em] text-ink-faint">GPX Editor</div>
     <h1 class="text-[27px] font-extrabold tracking-[-0.02em] text-ink">Files</h1>
   </div>
 
