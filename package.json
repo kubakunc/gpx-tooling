@@ -46,6 +46,7 @@
     "@capacitor/core": "^6.1.2",
     "@capacitor/filesystem": "^6.0.1",
     "@capacitor/share": "^6.0.2",
+    "@capacitor/status-bar": "^6.0.3",
     "@capawesome/capacitor-file-picker": "^6.1.0",
     "@fontsource/plus-jakarta-sans": "^5.2.8",
     "leaflet": "^1.9.4"

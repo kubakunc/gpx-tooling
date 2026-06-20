@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { Capacitor } from '@capacitor/core';
   import { App } from '@capacitor/app';
+  import { StatusBar, Style } from '@capacitor/status-bar';
   import type { PluginListenerHandle } from '@capacitor/core';
   import TopMenu from '$lib/components/TopMenu.svelte';
   import AdBanner from '$lib/components/AdBanner.svelte';
@@ -10,6 +11,14 @@
   let { children } = $props();
 
   onMount(() => {
+    // Match the status bar to the app's light background with dark icons. The
+    // theme reserves the space (edge-to-edge opt-out); this sets the colour
+    // reliably at runtime. Native-only; ignore failures (e.g. on web).
+    if (Capacitor.isNativePlatform()) {
+      void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+      void StatusBar.setBackgroundColor({ color: '#fcfbf9' }).catch(() => {});
+    }
+
     // Resolve UMP consent, initialise AdMob, and show the banner (native only).
     void adManager.init();
 
