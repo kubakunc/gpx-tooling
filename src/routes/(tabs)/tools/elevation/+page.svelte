@@ -18,8 +18,14 @@
   import type { TrackPoint } from '$lib/domain/entities/TrackPoint';
   import type { SmoothingLevel } from '$lib/domain/usecases/smoothElevation';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.elevation;
+
+  onMount(() => {
+    void analytics.toolOpen('elevation');
+  });
   const LEVEL_LABEL = { low: 'Low', medium: 'Medium', high: 'High' } as const;
 
   let busy = $state(false);
@@ -79,6 +85,7 @@
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');
+      void analytics.fileImport('elevation', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -94,6 +101,7 @@
       const xml = serializeGpx(corrected, name);
       await fileService.exportAndShare(xml, name);
       showToast('Corrected file shared', 'success');
+      void analytics.fileShare('elevation', 'gpx');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Share failed', 'error');
@@ -110,6 +118,7 @@
       const xml = serializeGpx(corrected, name);
       const res = await fileService.saveToDevice(xml, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('elevation', 'gpx', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {

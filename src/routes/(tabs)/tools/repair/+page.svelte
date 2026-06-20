@@ -14,8 +14,14 @@
   import { exportName, formatCount } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.repair;
+
+  onMount(() => {
+    void analytics.toolOpen('repair');
+  });
 
   let busy = $state(false);
   const STRENGTHS: RepairStrength[] = ['conservative', 'balanced', 'aggressive'];
@@ -74,6 +80,7 @@
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');
+      void analytics.fileImport('repair', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -89,6 +96,7 @@
       const name = exportName(activeFile.name, 'repaired');
       await fileService.exportAndShare(xml, name);
       showToast('Repaired file shared', 'success');
+      void analytics.fileShare('repair', 'gpx');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Share failed', 'error');
@@ -105,6 +113,7 @@
       const name = exportName(activeFile.name, 'repaired');
       const res = await fileService.saveToDevice(xml, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('repair', 'gpx', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -183,7 +192,7 @@
               data-testid="repair-strength-{STRENGTHS[i]}"
               class="flex-1"
               aria-pressed={strengthIndex === i}
-              onclick={() => (strengthIndex = i)}
+              onclick={() => { strengthIndex = i; void analytics.toolAction('repair', 'strength', { level: STRENGTHS[i] }); }}
             >
               <SegmentedControl
                 options={[label]}

@@ -12,8 +12,14 @@
   import { exportName, formatBytes } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.strip;
+
+  onMount(() => {
+    void analytics.toolOpen('strip');
+  });
 
   let busy = $state(false);
   // Default every toggle OFF so opening the tool and exporting never silently
@@ -57,6 +63,7 @@
   ] as const;
 
   function toggle(key: 'sensors' | 'timestamps' | 'elevation') {
+    void analytics.toolAction('strip', 'toggle', { field: key });
     if (key === 'sensors') stripSensors = !stripSensors;
     else if (key === 'timestamps') stripTimestamps = !stripTimestamps;
     else stripElevation = !stripElevation;
@@ -78,6 +85,7 @@
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');
+      void analytics.fileImport('strip', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -92,6 +100,7 @@
       const name = exportName(activeFile.name, 'stripped');
       await fileService.exportAndShare(afterXml, name);
       showToast('Stripped file shared', 'success');
+      void analytics.fileShare('strip', 'gpx');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Share failed', 'error');
@@ -107,6 +116,7 @@
       const name = exportName(activeFile.name, 'stripped');
       const res = await fileService.saveToDevice(afterXml, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('strip', 'gpx', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {

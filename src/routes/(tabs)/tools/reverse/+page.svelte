@@ -13,8 +13,14 @@
   import { exportName } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.reverse;
+
+  onMount(() => {
+    void analytics.toolOpen('reverse');
+  });
 
   let busy = $state(false);
 
@@ -39,6 +45,7 @@
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');
+      void analytics.fileImport('reverse', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -54,6 +61,7 @@
       const name = exportName(activeFile.name, 'reversed');
       await fileService.exportAndShare(xml, name);
       showToast('Reversed file shared', 'success');
+      void analytics.fileShare('reverse', 'gpx');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Share failed', 'error');
@@ -70,6 +78,7 @@
       const name = exportName(activeFile.name, 'reversed');
       const res = await fileService.saveToDevice(xml, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('reverse', 'gpx', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {

@@ -13,8 +13,14 @@
   import { exportName, formatDuration } from '$lib/domain/usecases/format';
   import { serializeGpx } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.time;
+
+  onMount(() => {
+    void analytics.toolOpen('time');
+  });
 
   let busy = $state(false);
   // The datetime-local value the user has entered (empty = leave start as-is).
@@ -82,6 +88,7 @@
 
   function nudge(deltaSec: number) {
     shiftSeconds += deltaSec;
+    void analytics.toolAction('time', 'shift');
   }
 
   // ms epoch → "YYYY-MM-DD HH:mm" local (mirrors toLocalInput's resolution).
@@ -106,6 +113,7 @@
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');
+      void analytics.fileImport('time', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -121,6 +129,7 @@
       const name = exportName(activeFile.name, 'retimed');
       await fileService.exportAndShare(xml, name);
       showToast('Updated file shared', 'success');
+      void analytics.fileShare('time', 'gpx');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Share failed', 'error');
@@ -137,6 +146,7 @@
       const name = exportName(activeFile.name, 'retimed');
       const res = await fileService.saveToDevice(xml, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('time', 'gpx', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -239,7 +249,7 @@
           class="mx-6 mt-[14px] flex w-[calc(100%-48px)] items-center justify-between rounded-[18px] border bg-white p-4 text-left"
           style="border-color:#f1e7da;"
           aria-pressed={removeStill}
-          onclick={() => (removeStill = !removeStill)}
+          onclick={() => { removeStill = !removeStill; void analytics.toolAction('time', 'remove_still'); }}
         >
           <div>
             <div class="text-[14px] font-bold text-ink">Remove still time</div>

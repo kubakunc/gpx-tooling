@@ -1,11 +1,22 @@
 <script lang="ts">
   import { adManager } from '$lib/ads/AdManager';
   import { settings, setUnits, type Units } from '$lib/stores/settings';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
+
+  onMount(() => {
+    void analytics.toolOpen('settings');
+  });
 
   const unitOptions: { value: Units; label: string }[] = [
     { value: 'metric', label: 'Metric (km/h, km, m)' },
     { value: 'imperial', label: 'Imperial (mph, mi, ft)' }
   ];
+
+  function changeUnits(value: Units) {
+    setUnits(value);
+    void analytics.toolAction('settings', 'units', { units: value });
+  }
 
   function manageConsent() {
     void adManager.reopenConsentForm();
@@ -38,7 +49,7 @@
             data-testid="units-{opt.value}"
             class="h-[18px] w-[18px]"
             style="accent-color:#3b3a36;"
-            onchange={() => setUnits(opt.value)}
+            onchange={() => changeUnits(opt.value)}
           />
           <span class="text-[14px] font-extrabold text-ink">{opt.label}</span>
         </label>

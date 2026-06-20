@@ -26,8 +26,14 @@
   } from '$lib/domain/usecases/mergeEngine';
   import { serializeGpxSegments } from '$lib/data/serialization/GpxSerializer';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.merge;
+
+  onMount(() => {
+    void analytics.toolOpen('merge');
+  });
 
   let busy = $state(false);
   let mode = $state<MergeMode>('smart');
@@ -80,6 +86,7 @@
       if (files.length === 0) return;
       addFiles(files);
       showToast(`Imported ${files.length} file${files.length === 1 ? '' : 's'}`, 'success');
+      void analytics.fileImport('merge', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -95,6 +102,7 @@
       const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
       await fileService.exportAndShare(xml, name);
       showToast('Merged file shared', 'success');
+      void analytics.fileShare('merge', 'gpx');
       // Only after a successful export, never mid-operation.
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
@@ -112,6 +120,7 @@
       const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
       const res = await fileService.saveToDevice(xml, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('merge', 'gpx', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -167,6 +176,7 @@
   function reorder(from: number, to: number) {
     reorderFiles(from, to);
     clearShifts();
+    void analytics.toolAction('merge', 'reorder');
   }
 
 </script>
@@ -225,7 +235,7 @@
             style={mode === 'smart'
               ? `background:${t.button};color:#fff;`
               : 'background:#fff;color:#6b7077;'}
-            onclick={() => (mode = 'smart')}>Smart</button
+            onclick={() => { mode = 'smart'; void analytics.toolAction('merge', 'mode', { mode: 'smart' }); }}>Smart</button
           >
           <button
             type="button"
@@ -235,7 +245,7 @@
             style={mode === 'sequential'
               ? `background:${t.button};color:#fff;`
               : 'background:#fff;color:#6b7077;'}
-            onclick={() => (mode = 'sequential')}>Sequential</button
+            onclick={() => { mode = 'sequential'; void analytics.toolAction('merge', 'mode', { mode: 'sequential' }); }}>Sequential</button
           >
         </div>
         <button

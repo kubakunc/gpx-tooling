@@ -17,9 +17,24 @@ import { Capacitor } from '@capacitor/core';
 import { setConsent } from '$lib/stores/settings';
 import { canShow } from './frequencyCap';
 
-/** Google-provided test ad unit IDs (swapped for real IDs in a later phase). */
+/** Google-provided test ad unit IDs — used in dev/test builds. */
 export const TEST_BANNER_AD_ID = 'ca-app-pub-3940256099942544/9214589741';
 export const TEST_INTERSTITIAL_AD_ID = 'ca-app-pub-3940256099942544/1033173712';
+
+/** Real AdMob ad unit IDs (publisher 2450963113368391) — used only in prod. */
+export const PROD_BANNER_AD_ID = 'ca-app-pub-2450963113368391/5393003457';
+export const PROD_INTERSTITIAL_AD_ID = 'ca-app-pub-2450963113368391/1584786235';
+
+// Resolve ad IDs by build mode: real ad units only in a production build, Google
+// test units everywhere else. Clicking your own LIVE ads during development is
+// an AdMob policy violation (account-ban risk), so dev/test must never serve
+// real ads. import.meta.env.PROD is true only for `vite build` (the release web
+// bundle); it is false under Vitest and `vite dev`.
+const ADS_PROD = import.meta.env.PROD;
+export const BANNER_AD_ID = ADS_PROD ? PROD_BANNER_AD_ID : TEST_BANNER_AD_ID;
+export const INTERSTITIAL_AD_ID = ADS_PROD ? PROD_INTERSTITIAL_AD_ID : TEST_INTERSTITIAL_AD_ID;
+/** Whether to request Google test ads (true unless this is a production build). */
+export const ADS_TESTING = !ADS_PROD;
 
 /**
  * The subset of the AdMob plugin surface AdManager depends on. Tests inject a
@@ -97,14 +112,14 @@ export class AdManager {
       if (info.status === AdmobConsentStatus.REQUIRED && info.isConsentFormAvailable) {
         info = await this.ads.showConsentForm();
       }
-      await this.ads.initialize({ initializeForTesting: true });
+      await this.ads.initialize({ initializeForTesting: ADS_TESTING });
       await this.bindBannerSizeListener();
       await this.ads.showBanner({
-        adId: TEST_BANNER_AD_ID,
+        adId: BANNER_AD_ID,
         adSize: BannerAdSize.ADAPTIVE_BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
         margin: 0,
-        isTesting: true
+        isTesting: ADS_TESTING
       });
       // Persist the truthful consent outcome: OBTAINED or NOT_REQUIRED mean we
       // may serve personalised/standard ads; a still-REQUIRED status (form
@@ -177,8 +192,8 @@ export class AdManager {
     try {
       await this.bindInterstitialListeners();
       await this.ads.prepareInterstitial({
-        adId: TEST_INTERSTITIAL_AD_ID,
-        isTesting: true
+        adId: INTERSTITIAL_AD_ID,
+        isTesting: ADS_TESTING
       });
     } catch {
       this.preparing = false;

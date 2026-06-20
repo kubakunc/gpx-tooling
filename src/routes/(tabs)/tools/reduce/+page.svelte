@@ -16,8 +16,14 @@
   import { gpxWorkerClient } from '$lib/workers/gpxWorkerClient';
   import { debounce } from '$lib/util/debounce';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.reduce;
+
+  onMount(() => {
+    void analytics.toolOpen('reduce');
+  });
 
   let busy = $state(false);
   let calculating = $state(false);
@@ -96,6 +102,7 @@
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');
+      void analytics.fileImport('reduce', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -113,6 +120,7 @@
       const name = exportName(file.name, 'reduced');
       await fileService.exportAndShare(afterXml, name);
       showToast('Reduced file shared', 'success');
+      void analytics.fileShare('reduce', 'gpx');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Share failed', 'error');
@@ -130,6 +138,7 @@
       const name = exportName(file.name, 'reduced');
       const res = await fileService.saveToDevice(afterXml, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('reduce', 'gpx', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {

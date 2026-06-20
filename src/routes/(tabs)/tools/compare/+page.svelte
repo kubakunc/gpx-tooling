@@ -16,8 +16,14 @@
   } from '$lib/domain/usecases/compare';
   import { formatDuration } from '$lib/domain/usecases/format';
   import { debounce } from '$lib/util/debounce';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.compare;
+
+  onMount(() => {
+    void analytics.toolOpen('compare');
+  });
   const AMBER = '#f59e0b';
 
   const metricLabels: Record<CompareMetric, string> = {
@@ -140,6 +146,7 @@
       const csv = comparisonToCsv(result, metric);
       await fileService.shareTextFile(csv, exportFilename);
       showToast('Comparison shared', 'success');
+      void analytics.fileShare('compare', 'csv');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Share failed', 'error');
     } finally {
@@ -154,6 +161,7 @@
       const csv = comparisonToCsv(result, metric);
       const res = await fileService.saveToDevice(csv, exportFilename);
       if (res.saved) showToast(savedToDeviceMessage(exportFilename), 'success');
+      void analytics.fileSave('compare', 'csv', res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -218,7 +226,7 @@
               : 'background:#fff;color:#6b7077;font-weight:700;border:1px solid #efece6;'}"
             aria-pressed={i === metricIndex}
             disabled={!metricHasData[i]}
-            onclick={() => (metricIndex = i)}
+            onclick={() => { metricIndex = i; void analytics.toolAction('compare', 'metric', { metric: COMPARE_METRICS[i] }); }}
           >
             {metricLabels[m]}
           </button>

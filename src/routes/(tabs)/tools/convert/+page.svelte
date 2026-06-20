@@ -11,8 +11,14 @@
   import { EXPORT_FORMATS, type ExportFormat, serializeAs, stripSensors } from '$lib/domain/usecases/convert';
   import { exportName } from '$lib/domain/usecases/format';
   import { adManager } from '$lib/ads/AdManager';
+  import { analytics } from '$lib/analytics/analytics';
+  import { onMount } from 'svelte';
 
   const t = toolThemes.convert;
+
+  onMount(() => {
+    void analytics.toolOpen('convert');
+  });
 
   let busy = $state(false);
   let target = $state<ExportFormat>('tcx');
@@ -49,6 +55,7 @@
       resetEditSession();
       setFileId(added[0].id);
       showToast(`Imported ${files[0].name}`, 'success');
+      void analytics.fileImport('convert', files[0]?.name.toLowerCase().endsWith('.fit') ? 'fit' : 'gpx', files.length);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Import failed', 'error');
     } finally {
@@ -69,6 +76,7 @@
       const { data, name } = buildConverted();
       await fileService.exportAndShare(data, name);
       showToast(`Converted to ${target.toUpperCase()}`, 'success');
+      void analytics.fileShare('convert', target);
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Conversion failed', 'error');
@@ -84,6 +92,7 @@
       const { data, name } = buildConverted();
       const res = await fileService.saveToDevice(data, name);
       if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+      void analytics.fileSave('convert', target, res.saved ? 'saved' : 'cancelled');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -151,7 +160,7 @@
             style="padding-top:12px;padding-bottom:12px;{target === fmt
               ? `background:${t.tile};border:2px solid ${t.icon};color:${t.button};`
               : 'border:1px solid #efece6;background:#fff;color:#6b7077;'}"
-            onclick={() => (target = fmt)}
+            onclick={() => { target = fmt; void analytics.toolAction('convert', 'format', { format: fmt }); }}
           >
             {fmt.toUpperCase()}
           </button>
@@ -178,7 +187,7 @@
           class="flex items-center gap-3 rounded-[16px] border bg-white px-[15px] py-[13px] text-left"
           style="border-color:#efece6;{sensorsDisabled ? 'opacity:0.5;' : ''}"
           disabled={sensorsDisabled}
-          onclick={() => (keepSensors = !keepSensors)}
+          onclick={() => { void analytics.toolAction('convert', 'sensors', { on: !keepSensors }); keepSensors = !keepSensors; }}
         >
           <div class="flex-1 text-[14px] font-bold text-ink">
             Sensor data <span class="font-semibold" style="color:#9aa0a8;">HR · CAD · PWR</span>
