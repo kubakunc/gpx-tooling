@@ -5,7 +5,7 @@
   import { toolThemes, rgba } from '$lib/toolThemes';
   import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
   import { editSession, setFileId, resetEditSession } from '$lib/stores/editSession';
-  import { fileService } from '$lib/data/io/FileService';
+  import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { repairElevation } from '$lib/domain/usecases/repairElevation';
   import { smoothElevation, elevationFixLevelFromPercent } from '$lib/domain/usecases/smoothElevation';
@@ -86,17 +86,32 @@
     }
   }
 
-  async function applyAndSave() {
+  async function shareCorrected() {
     if (busy || calculating || !activeFile || corrected.length === 0) return;
     busy = true;
     try {
       const name = exportFilename;
       const xml = serializeGpx(corrected, name);
       await fileService.exportAndShare(xml, name);
-      showToast('Corrected file exported', 'success');
+      showToast('Corrected file shared', 'success');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function saveCorrected() {
+    if (busy || calculating || !activeFile || corrected.length === 0) return;
+    busy = true;
+    try {
+      const name = exportFilename;
+      const xml = serializeGpx(corrected, name);
+      const res = await fileService.saveToDevice(xml, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
       busy = false;
     }
@@ -203,15 +218,28 @@
       <div class="mb-[8px] text-center text-[12px]" style="color:#b08b4a;">
         Saves as: <span class="font-bold">{exportFilename}</span>
       </div>
-      <button
-        type="button"
-        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
-        style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
-        disabled={busy || calculating || corrected.length === 0}
-        onclick={applyAndSave}
-      >
-        {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Apply correction{/if}
-      </button>
+      <div class="flex gap-3">
+        <button
+          type="button"
+          data-testid="elevation-share"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
+          style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
+          disabled={busy || calculating || corrected.length === 0}
+          onclick={shareCorrected}
+        >
+          {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Share{/if}
+        </button>
+        <button
+          type="button"
+          data-testid="elevation-save"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
+          style="border-color:{t.button};color:{t.button};background:#fff;"
+          disabled={busy || calculating || corrected.length === 0}
+          onclick={saveCorrected}
+        >
+          {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Save{/if}
+        </button>
+      </div>
     </div>
   {/if}
 </div>

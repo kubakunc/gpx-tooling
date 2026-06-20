@@ -4,6 +4,7 @@ import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import type { GpxFile } from '$lib/domain/entities/GpxFile';
 import { importTrack } from '$lib/data/parsing/TrackImporter';
+import { FileSaver, type SaveFileOptions, type SaveFileResult } from './fileSaver';
 import { ParseError } from '$lib/domain/errors';
 
 /** Decode a base64 string to a byte array. */
@@ -18,6 +19,30 @@ export function decodeBase64Bytes(b64: string): Uint8Array {
 /** Decode a base64 string to UTF-8 text (used for web file-picker `data`). */
 export function decodeBase64Utf8(b64: string): string {
   return new TextDecoder('utf-8').decode(decodeBase64Bytes(b64));
+}
+
+/** Encode UTF-8 text to base64 (used to hand file bytes to the native saver). */
+export function encodeUtf8Base64(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+/** MIME type for a track/export filename, by extension (defaults to GPX). */
+export function mimeForFilename(name: string): string {
+  const ext = name.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+  switch (ext) {
+    case 'tcx':
+      return 'application/vnd.garmin.tcx+xml';
+    case 'kml':
+      return 'application/vnd.google-earth.kml+xml';
+    case 'csv':
+      return 'text/csv';
+    case 'gpx':
+    default:
+      return 'application/gpx+xml';
+  }
 }
 
 /** True when a filename has a `.fit` extension (case-insensitive). */
@@ -40,11 +65,11 @@ export function ensureExportExt(name: string): string {
 }
 
 /**
- * Build the "Saved to …" success message for a file saved to device Documents.
- * Pure helper so the message format is unit-testable without IO.
+ * Build the "Saved …" success message for a file the user saved to a location
+ * of their choosing. Pure helper so the message format is unit-testable.
  */
 export function savedToDeviceMessage(filename: string): string {
-  return `Saved to Documents/${filename}`;
+  return `Saved ${filename}`;
 }
 
 /** Map any thrown value to a user-friendly message for a toast. */
@@ -67,6 +92,14 @@ function defaultDownload(xml: string, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** Outcome of a "Save" action: whether a file was written, and where. */
+export interface SaveOutcome {
+  /** True when a file was actually written (false when the user cancelled). */
+  saved: boolean;
+  /** content:// URI on native, '' on web or when cancelled. */
+  uri: string;
+}
+
 export interface FileServiceDeps {
   /** Injectable web downloader (for tests / custom hosts). */
   download?: (xml: string, filename: string) => void;
@@ -77,6 +110,11 @@ export interface FileServiceDeps {
    * tests. Must NOT be routed through the worker.
    */
   parseGpxText?: (name: string, text: string) => Promise<GpxFile>;
+  /**
+   * Injectable native "Save as…" bridge (Storage Access Framework). Defaults to
+   * the `FileSaver` plugin; overridable for tests.
+   */
+  saveAs?: (options: SaveFileOptions) => Promise<SaveFileResult>;
 }
 
 /**
@@ -86,12 +124,14 @@ export interface FileServiceDeps {
 export class FileService {
   private download: (xml: string, filename: string) => void;
   private parseGpxText: (name: string, text: string) => Promise<GpxFile>;
+  private saveAs: (options: SaveFileOptions) => Promise<SaveFileResult>;
 
   constructor(deps: FileServiceDeps = {}) {
     this.download = deps.download ?? defaultDownload;
     // Default: parse on the MAIN THREAD via importTrack → parseGpx (DOMParser).
     // A Web Worker has no DOMParser, so parsing must never be offloaded.
     this.parseGpxText = deps.parseGpxText ?? (async (name, text) => importTrack(name, { text }));
+    this.saveAs = deps.saveAs ?? ((options) => FileSaver.saveFile(options));
   }
 
   /**
@@ -186,29 +226,25 @@ export class FileService {
   }
 
   /**
-   * Save the given text to the device's Documents directory (native), or fall
-   * back to a Blob download (web). Returns the file `uri` on native, or '' on
-   * web. Errors are surfaced with friendly messages.
+   * Save the given text to a location the user picks. On native this opens the
+   * Android Storage Access Framework "Create document" browser so the user
+   * chooses the destination folder + filename; on web it falls back to a Blob
+   * download. Returns whether a file was written and its URI. A user cancel is
+   * not an error — it resolves with `{ saved: false }`.
    */
-  async saveToDevice(text: string, filename: string): Promise<string> {
+  async saveToDevice(text: string, filename: string): Promise<SaveOutcome> {
     try {
       if (Capacitor.isNativePlatform()) {
-        await Filesystem.writeFile({
-          path: filename,
-          data: text,
-          directory: Directory.Documents,
-          encoding: Encoding.UTF8,
-          recursive: true
+        const { uri, cancelled } = await this.saveAs({
+          data: encodeUtf8Base64(text),
+          filename: ensureExportExt(filename),
+          mimeType: mimeForFilename(filename)
         });
-        const { uri } = await Filesystem.getUri({
-          path: filename,
-          directory: Directory.Documents
-        });
-        return uri;
+        return { saved: !cancelled, uri };
       }
       // Web fallback: reuse the existing Blob download.
       this.download(text, filename);
-      return '';
+      return { saved: true, uri: '' };
     } catch (e) {
       throw new Error(friendlyImportError(e));
     }

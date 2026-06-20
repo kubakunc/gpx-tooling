@@ -47,10 +47,15 @@ test.describe('compare', () => {
     for (let i = 0; i < 30; i++) await shift.press('ArrowRight');
     await expect(diff).not.toHaveText(diffBefore ?? '');
 
-    // Export CSV download.
+    // Share CSV download (web fallback for the share action).
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export CSV' }).click();
+    await page.getByTestId('compare-share').click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.csv$/);
+
+    // Save also writes the CSV (web fallback is a download).
+    const savePromise = page.waitForEvent('download');
+    await page.getByTestId('compare-save').click();
+    expect((await savePromise).suggestedFilename()).toMatch(/\.csv$/);
   });
 });

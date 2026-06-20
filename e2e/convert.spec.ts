@@ -13,9 +13,14 @@ test.describe('convert', () => {
     await expect(page.getByText(/Saves as:/)).toContainText('.tcx');
 
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Convert format' }).click();
+    await page.getByTestId('convert-share').click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.tcx$/);
+
+    // Save also writes the file (web fallback is a download).
+    const savePromise = page.waitForEvent('download');
+    await page.getByTestId('convert-save').click();
+    expect((await savePromise).suggestedFilename()).toMatch(/\.tcx$/);
   });
 
   test('KML disables the sensor toggle', async ({ page }) => {

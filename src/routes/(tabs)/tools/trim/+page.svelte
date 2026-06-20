@@ -7,7 +7,7 @@
   import { toolThemes, rgba } from '$lib/toolThemes';
   import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
   import { editSession, setFileId, setStartRatio, setEndRatio, resetEditSession } from '$lib/stores/editSession';
-  import { fileService } from '$lib/data/io/FileService';
+  import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { trimGpx } from '$lib/domain/usecases/trim';
   import { totalDistanceMeters, durationSeconds } from '$lib/domain/usecases/stats';
@@ -78,17 +78,34 @@
     }
   }
 
-  async function trimAndSave() {
-    if (busy || !activeFile || kept.length < 2) return;
+  async function shareTrimmed() {
+    const file = activeFile;
+    if (busy || !file || kept.length < 2) return;
     busy = true;
     try {
       const xml = serializeGpx(kept, 'trimmed');
-      const name = exportName(activeFile.name, 'trimmed');
+      const name = exportName(file.name, 'trimmed');
       await fileService.exportAndShare(xml, name);
-      showToast('Trimmed file exported', 'success');
+      showToast('Trimmed file shared', 'success');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function saveTrimmed() {
+    const file = activeFile;
+    if (busy || !file || kept.length < 2) return;
+    busy = true;
+    try {
+      const xml = serializeGpx(kept, 'trimmed');
+      const name = exportName(file.name, 'trimmed');
+      const res = await fileService.saveToDevice(xml, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
       busy = false;
     }
@@ -188,12 +205,22 @@
   {#if activeFile}
     <div class="flex gap-3 px-6 pb-5 pt-2">
       <button
-        class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
+        data-testid="trim-share"
+        class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
         disabled={busy || kept.length < 2}
-        onclick={trimAndSave}
+        onclick={shareTrimmed}
       >
-        {#if busy}<Spinner /> Working…{:else}Trim &amp; save{/if}
+        {#if busy}<Spinner /> Working…{:else}Share{/if}
+      </button>
+      <button
+        data-testid="trim-save"
+        class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
+        style="border-color:{t.button};color:{t.button};background:#fff;"
+        disabled={busy || kept.length < 2}
+        onclick={saveTrimmed}
+      >
+        {#if busy}<Spinner /> Working…{:else}Save{/if}
       </button>
       <button
         class="h-[56px] w-[56px] rounded-[20px] text-[18px]"

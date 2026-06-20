@@ -3,7 +3,7 @@
   import Spinner from '$lib/components/Spinner.svelte';
   import { toolThemes, rgba } from '$lib/toolThemes';
   import { loadedFiles } from '$lib/stores/loadedFiles';
-  import { fileService } from '$lib/data/io/FileService';
+  import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import {
     COMPARE_METRICS,
@@ -133,15 +133,29 @@
     metricIndex = 0;
   }
 
-  async function saveComparison() {
+  async function shareComparison() {
     if (busy || !ready || !hasData) return;
     busy = true;
     try {
       const csv = comparisonToCsv(result, metric);
       await fileService.shareTextFile(csv, exportFilename);
-      showToast('Comparison exported', 'success');
+      showToast('Comparison shared', 'success');
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function saveComparison() {
+    if (busy || !ready || !hasData) return;
+    busy = true;
+    try {
+      const csv = comparisonToCsv(result, metric);
+      const res = await fileService.saveToDevice(csv, exportFilename);
+      if (res.saved) showToast(savedToDeviceMessage(exportFilename), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
       busy = false;
     }
@@ -321,12 +335,23 @@
       <div class="flex gap-3">
         <button
           type="button"
-          onclick={saveComparison}
+          data-testid="compare-share"
+          onclick={shareComparison}
           disabled={busy || !hasData}
-          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
           style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
         >
-          {#if busy}<Spinner /> Saving…{:else}Export CSV{/if}
+          {#if busy}<Spinner /> Working…{:else}Share{/if}
+        </button>
+        <button
+          type="button"
+          data-testid="compare-save"
+          onclick={saveComparison}
+          disabled={busy || !hasData}
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
+          style="border-color:{t.button};color:{t.button};background:#fff;"
+        >
+          {#if busy}<Spinner /> Working…{:else}Save{/if}
         </button>
         <button
           type="button"

@@ -120,10 +120,10 @@
       const xml = serializeGpx(result.points, 'retimed');
       const name = exportName(activeFile.name, 'retimed');
       await fileService.exportAndShare(xml, name);
-      showToast('Updated file exported', 'success');
+      showToast('Updated file shared', 'success');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
     } finally {
       busy = false;
     }
@@ -135,8 +135,8 @@
     try {
       const xml = serializeGpx(result.points, 'retimed');
       const name = exportName(activeFile.name, 'retimed');
-      await fileService.saveToDevice(xml, name);
-      showToast(savedToDeviceMessage(name), 'success');
+      const res = await fileService.saveToDevice(xml, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -280,7 +280,7 @@
           disabled={busy || !changed}
           onclick={applyAndExport}
         >
-          {#if busy}<Spinner /> Working…{:else}Apply &amp; export{/if}
+          {#if busy}<Spinner /> Working…{:else}Share{/if}
         </button>
         <button
           data-testid="time-save"
@@ -289,7 +289,7 @@
           disabled={busy || !changed}
           onclick={saveToDevice}
         >
-          {#if busy}<Spinner /> Working…{:else}Save to device{/if}
+          {#if busy}<Spinner /> Working…{:else}Save{/if}
         </button>
       </div>
     </div>
