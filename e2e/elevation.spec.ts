@@ -25,8 +25,13 @@ test.describe('elevation', () => {
     await expect(after).not.toHaveText(afterStart ?? '');
 
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Apply correction' }).click();
+    await page.getByTestId('elevation-share').click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.gpx$/);
+
+    // Save also writes the file (web fallback is a download).
+    const savePromise = page.waitForEvent('download');
+    await page.getByTestId('elevation-save').click();
+    expect((await savePromise).suggestedFilename()).toMatch(/\.gpx$/);
   });
 });

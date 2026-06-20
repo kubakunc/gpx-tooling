@@ -25,10 +25,15 @@ test.describe('trim', () => {
 
     await expect(keepStat).not.toHaveText(before ?? '');
 
-    // Save triggers a download.
+    // Share triggers a download (web fallback for the share action).
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Trim & save' }).click();
+    await page.getByTestId('trim-share').click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.gpx$/);
+
+    // Save also writes the file (web fallback is a download).
+    const savePromise = page.waitForEvent('download');
+    await page.getByTestId('trim-save').click();
+    expect((await savePromise).suggestedFilename()).toMatch(/\.gpx$/);
   });
 });

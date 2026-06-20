@@ -91,10 +91,10 @@
     try {
       const name = exportName(activeFile.name, 'stripped');
       await fileService.exportAndShare(afterXml, name);
-      showToast('Stripped file exported', 'success');
+      showToast('Stripped file shared', 'success');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
     } finally {
       busy = false;
     }
@@ -105,8 +105,8 @@
     busy = true;
     try {
       const name = exportName(activeFile.name, 'stripped');
-      await fileService.saveToDevice(afterXml, name);
-      showToast(savedToDeviceMessage(name), 'success');
+      const res = await fileService.saveToDevice(afterXml, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -201,7 +201,7 @@
           disabled={busy || !anyToggleOn}
           onclick={stripAndExport}
         >
-          {#if busy}<Spinner /> Working…{:else}Strip &amp; export{/if}
+          {#if busy}<Spinner /> Working…{:else}Share{/if}
         </button>
         <button
           data-testid="strip-save"
@@ -210,7 +210,7 @@
           disabled={busy || !anyToggleOn}
           onclick={saveToDevice}
         >
-          {#if busy}<Spinner /> Working…{:else}Save to device{/if}
+          {#if busy}<Spinner /> Working…{:else}Save{/if}
         </button>
       </div>
     </div>

@@ -24,10 +24,15 @@ test.describe('reduce', () => {
     await expect(pointsStat).not.toContainText('calculating');
     await expect(pointsStat).not.toHaveText(before ?? '');
 
-    // Reduce & save downloads the simplified file.
+    // Share downloads the simplified file (web fallback for the share action).
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Reduce & save' }).click();
+    await page.getByTestId('reduce-share').click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/\.gpx$/);
+
+    // Save also writes the file (web fallback is a download).
+    const savePromise = page.waitForEvent('download');
+    await page.getByTestId('reduce-save').click();
+    expect((await savePromise).suggestedFilename()).toMatch(/\.gpx$/);
   });
 });

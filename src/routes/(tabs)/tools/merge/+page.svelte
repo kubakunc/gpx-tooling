@@ -94,11 +94,11 @@
       const xml = serializeGpxSegments(result.segments, 'merged');
       const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
       await fileService.exportAndShare(xml, name);
-      showToast('Merged file exported', 'success');
+      showToast('Merged file shared', 'success');
       // Only after a successful export, never mid-operation.
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
     } finally {
       busy = false;
     }
@@ -110,8 +110,8 @@
     try {
       const xml = serializeGpxSegments(result.segments, 'merged');
       const name = exportName($loadedFiles[0]?.name ?? '', 'merged');
-      await fileService.saveToDevice(xml, name);
-      showToast(savedToDeviceMessage(name), 'success');
+      const res = await fileService.saveToDevice(xml, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -483,7 +483,7 @@
           disabled={busy || $loadedFiles.length < 2}
           onclick={mergeAndExport}
         >
-          {#if busy}<Spinner /> Working…{:else}Merge &amp; export{/if}
+          {#if busy}<Spinner /> Working…{:else}Share{/if}
         </button>
         <button
           data-testid="merge-save"
@@ -492,7 +492,7 @@
           disabled={busy || $loadedFiles.length < 2}
           onclick={saveToDevice}
         >
-          {#if busy}<Spinner /> Working…{:else}Save to device{/if}
+          {#if busy}<Spinner /> Working…{:else}Save{/if}
         </button>
       </div>
     </div>

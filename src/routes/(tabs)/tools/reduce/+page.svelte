@@ -8,7 +8,7 @@
   import type { TrackPoint } from '$lib/domain/entities/TrackPoint';
   import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
   import { editSession, setFileId, setEpsilon, resetEditSession } from '$lib/stores/editSession';
-  import { fileService } from '$lib/data/io/FileService';
+  import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { percentToEpsilon, simplificationLabel } from '$lib/domain/usecases/reduceMapping';
   import { formatCount, formatBytes, exportName } from '$lib/domain/usecases/format';
@@ -103,18 +103,35 @@
     }
   }
 
-  async function reduceAndSave() {
-    if (busy || calculating || !activeFile || reduced.length < 2) return;
+  async function shareReduced() {
+    const file = activeFile;
+    if (busy || calculating || !file || reduced.length < 2) return;
     busy = true;
     try {
       // Keep epsilon in the shared edit session for continuity.
       setEpsilon(epsilon);
-      const name = exportName(activeFile.name, 'reduced');
+      const name = exportName(file.name, 'reduced');
       await fileService.exportAndShare(afterXml, name);
-      showToast('Reduced file exported', 'success');
+      showToast('Reduced file shared', 'success');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function saveReduced() {
+    const file = activeFile;
+    if (busy || calculating || !file || reduced.length < 2) return;
+    busy = true;
+    try {
+      setEpsilon(epsilon);
+      const name = exportName(file.name, 'reduced');
+      const res = await fileService.saveToDevice(afterXml, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
       busy = false;
     }
@@ -207,14 +224,24 @@
   </div>
 
   {#if activeFile}
-    <div class="px-6 pb-5 pt-2">
+    <div class="flex gap-3 px-6 pb-5 pt-2">
       <button
-        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
+        data-testid="reduce-share"
+        class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
         style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.3)};"
         disabled={busy || calculating || reduced.length < 2}
-        onclick={reduceAndSave}
+        onclick={shareReduced}
       >
-        {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Reduce &amp; save{/if}
+        {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Share{/if}
+      </button>
+      <button
+        data-testid="reduce-save"
+        class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
+        style="border-color:{t.button};color:{t.button};background:#fff;"
+        disabled={busy || calculating || reduced.length < 2}
+        onclick={saveReduced}
+      >
+        {#if busy}<Spinner /> Working…{:else if calculating}<Spinner /> Calculating…{:else}Save{/if}
       </button>
     </div>
   {/if}

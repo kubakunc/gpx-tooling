@@ -6,7 +6,7 @@
   import { toolThemes, rgba } from '$lib/toolThemes';
   import { loadedFiles, addFiles } from '$lib/stores/loadedFiles';
   import { editSession, setFileId, resetEditSession } from '$lib/stores/editSession';
-  import { fileService } from '$lib/data/io/FileService';
+  import { fileService, savedToDeviceMessage } from '$lib/data/io/FileService';
   import { showToast } from '$lib/stores/toast';
   import { EXPORT_FORMATS, type ExportFormat, serializeAs, stripSensors } from '$lib/domain/usecases/convert';
   import { exportName } from '$lib/domain/usecases/format';
@@ -56,18 +56,36 @@
     }
   }
 
-  async function convertAndSave() {
+  function buildConverted(): { data: string; name: string } {
+    const out = sensorsOn ? points : stripSensors(points);
+    const name = exportFilename;
+    return { data: serializeAs(target, out, name), name };
+  }
+
+  async function shareConverted() {
     if (busy || !activeFile || points.length === 0) return;
     busy = true;
     try {
-      const out = sensorsOn ? points : stripSensors(points);
-      const name = exportFilename;
-      const data = serializeAs(target, out, name);
+      const { data, name } = buildConverted();
       await fileService.exportAndShare(data, name);
       showToast(`Converted to ${target.toUpperCase()}`, 'success');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Conversion failed', 'error');
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function saveConverted() {
+    if (busy || !activeFile || points.length === 0) return;
+    busy = true;
+    try {
+      const { data, name } = buildConverted();
+      const res = await fileService.saveToDevice(data, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
       busy = false;
     }
@@ -181,15 +199,28 @@
       <div class="mb-[8px] text-center text-[12px]" style="color:#b06a8c;">
         Saves as: <span class="font-bold">{exportFilename}</span>
       </div>
-      <button
-        type="button"
-        class="flex h-[56px] w-full items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white"
-        style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
-        disabled={busy || points.length === 0}
-        onclick={convertAndSave}
-      >
-        {#if busy}<Spinner /> Working…{:else}Convert format{/if}
-      </button>
+      <div class="flex gap-3">
+        <button
+          type="button"
+          data-testid="convert-share"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] text-[16px] font-extrabold text-white disabled:opacity-50"
+          style="background:{t.button};box-shadow:0 12px 26px {rgba(t.button, 0.32)};"
+          disabled={busy || points.length === 0}
+          onclick={shareConverted}
+        >
+          {#if busy}<Spinner /> Working…{:else}Share{/if}
+        </button>
+        <button
+          type="button"
+          data-testid="convert-save"
+          class="flex h-[56px] flex-1 items-center justify-center gap-2 rounded-[20px] border-2 text-[16px] font-extrabold disabled:opacity-50"
+          style="border-color:{t.button};color:{t.button};background:#fff;"
+          disabled={busy || points.length === 0}
+          onclick={saveConverted}
+        >
+          {#if busy}<Spinner /> Working…{:else}Save{/if}
+        </button>
+      </div>
     </div>
   {/if}
 </div>

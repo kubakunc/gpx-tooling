@@ -9,6 +9,7 @@ const getUri = vi.fn();
 const readFile = vi.fn();
 const share = vi.fn();
 const isNativePlatform = vi.fn();
+const saveFile = vi.fn();
 
 vi.mock('@capawesome/capacitor-file-picker', () => ({
   FilePicker: { pickFiles: (...a: unknown[]) => pickFiles(...a) }
@@ -26,13 +27,16 @@ vi.mock('@capacitor/share', () => ({
   Share: { share: (...a: unknown[]) => share(...a) }
 }));
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { isNativePlatform: () => isNativePlatform() }
+  Capacitor: { isNativePlatform: () => isNativePlatform() },
+  registerPlugin: () => ({ saveFile: (...a: unknown[]) => saveFile(...a) })
 }));
 
 import {
   FileService,
   decodeBase64Utf8,
   decodeBase64Bytes,
+  encodeUtf8Base64,
+  mimeForFilename,
   isFitName,
   ensureGpxExt,
   ensureExportExt,
@@ -100,8 +104,21 @@ describe('pure helpers', () => {
     expect(typeof friendlyImportError('weird')).toBe('string');
   });
 
-  it('savedToDeviceMessage formats the Documents path', () => {
-    expect(savedToDeviceMessage('ride-merged.gpx')).toBe('Saved to Documents/ride-merged.gpx');
+  it('savedToDeviceMessage formats the saved-file message', () => {
+    expect(savedToDeviceMessage('ride-merged.gpx')).toBe('Saved ride-merged.gpx');
+  });
+
+  it('encodeUtf8Base64 round-trips with decodeBase64Utf8 (incl. multibyte)', () => {
+    expect(decodeBase64Utf8(encodeUtf8Base64('hello'))).toBe('hello');
+    expect(decodeBase64Utf8(encodeUtf8Base64('běžky → naměřeno'))).toBe('běžky → naměřeno');
+  });
+
+  it('mimeForFilename maps known track extensions and defaults to GPX', () => {
+    expect(mimeForFilename('ride.gpx')).toBe('application/gpx+xml');
+    expect(mimeForFilename('ride.tcx')).toBe('application/vnd.garmin.tcx+xml');
+    expect(mimeForFilename('ride.kml')).toBe('application/vnd.google-earth.kml+xml');
+    expect(mimeForFilename('compare.csv')).toBe('text/csv');
+    expect(mimeForFilename('noext')).toBe('application/gpx+xml');
   });
 });
 
@@ -268,43 +285,67 @@ describe('exportAndShare', () => {
 });
 
 describe('saveToDevice', () => {
-  it('native: writes to Documents (recursive) and returns the uri', async () => {
+  it('native: opens the SAF "save as" dialog and returns the chosen uri', async () => {
     isNativePlatform.mockReturnValue(true);
-    writeFile.mockResolvedValue({});
-    getUri.mockResolvedValue({ uri: 'file:///docs/out.gpx' });
+    saveFile.mockResolvedValue({ uri: 'content://docs/out.gpx', cancelled: false });
     const svc = new FileService();
-    const uri = await svc.saveToDevice('<gpx/>', 'out.gpx');
-    expect(writeFile).toHaveBeenCalledWith(
+    const res = await svc.saveToDevice('<gpx/>', 'out.gpx');
+    // Hands base64 of the text + a suggested name + GPX mime to the native saver.
+    expect(saveFile).toHaveBeenCalledWith(
       expect.objectContaining({
-        path: 'out.gpx',
-        data: '<gpx/>',
-        encoding: 'utf8',
-        directory: 'DOCUMENTS',
-        recursive: true
+        data: encodeUtf8Base64('<gpx/>'),
+        filename: 'out.gpx',
+        mimeType: 'application/gpx+xml'
       })
     );
-    expect(getUri).toHaveBeenCalledWith(
-      expect.objectContaining({ path: 'out.gpx', directory: 'DOCUMENTS' })
-    );
-    expect(uri).toBe('file:///docs/out.gpx');
+    expect(res).toEqual({ saved: true, uri: 'content://docs/out.gpx' });
+    // The save path never goes through writeFile/share.
+    expect(writeFile).not.toHaveBeenCalled();
     expect(share).not.toHaveBeenCalled();
   });
 
-  it('native: surfaces a friendly error if write fails', async () => {
+  it('native: a user cancel resolves to saved:false (not an error)', async () => {
     isNativePlatform.mockReturnValue(true);
-    writeFile.mockRejectedValue(new Error('disk full'));
+    saveFile.mockResolvedValue({ uri: '', cancelled: true });
+    const svc = new FileService();
+    const res = await svc.saveToDevice('<gpx/>', 'out.gpx');
+    expect(res).toEqual({ saved: false, uri: '' });
+  });
+
+  it('native: forces an export extension on the suggested filename', async () => {
+    isNativePlatform.mockReturnValue(true);
+    saveFile.mockResolvedValue({ uri: 'content://docs/out.gpx', cancelled: false });
+    const svc = new FileService();
+    await svc.saveToDevice('<gpx/>', 'noext');
+    expect(saveFile).toHaveBeenCalledWith(expect.objectContaining({ filename: 'noext.gpx' }));
+  });
+
+  it('native: surfaces a friendly error if the save fails', async () => {
+    isNativePlatform.mockReturnValue(true);
+    saveFile.mockRejectedValue(new Error('disk full'));
     const svc = new FileService();
     await expect(svc.saveToDevice('<gpx/>', 'out.gpx')).rejects.toThrow(/disk full/);
   });
 
-  it('web: falls back to the Blob download and returns empty uri', async () => {
+  it('web: falls back to the Blob download and reports saved with empty uri', async () => {
     isNativePlatform.mockReturnValue(false);
     const download = vi.fn();
     const svc = new FileService({ download });
-    const uri = await svc.saveToDevice('<gpx/>', 'out.gpx');
+    const res = await svc.saveToDevice('<gpx/>', 'out.gpx');
     expect(download).toHaveBeenCalledWith('<gpx/>', 'out.gpx');
-    expect(uri).toBe('');
-    expect(writeFile).not.toHaveBeenCalled();
+    expect(res).toEqual({ saved: true, uri: '' });
+    expect(saveFile).not.toHaveBeenCalled();
+  });
+
+  it('uses the injectable saveAs bridge when provided', async () => {
+    isNativePlatform.mockReturnValue(true);
+    const saveAs = vi.fn().mockResolvedValue({ uri: 'content://x', cancelled: false });
+    const svc = new FileService({ saveAs });
+    const res = await svc.saveToDevice('<gpx/>', 'out.tcx');
+    expect(saveAs).toHaveBeenCalledWith(
+      expect.objectContaining({ filename: 'out.tcx', mimeType: 'application/vnd.garmin.tcx+xml' })
+    );
+    expect(res.saved).toBe(true);
   });
 });
 

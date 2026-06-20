@@ -53,10 +53,10 @@
       const xml = serializeGpx(reversed, 'reversed');
       const name = exportName(activeFile.name, 'reversed');
       await fileService.exportAndShare(xml, name);
-      showToast('Reversed file exported', 'success');
+      showToast('Reversed file shared', 'success');
       void adManager.showInterstitialIfReady(() => {});
     } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Export failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Share failed', 'error');
     } finally {
       busy = false;
     }
@@ -68,8 +68,8 @@
     try {
       const xml = serializeGpx(reversed, 'reversed');
       const name = exportName(activeFile.name, 'reversed');
-      await fileService.saveToDevice(xml, name);
-      showToast(savedToDeviceMessage(name), 'success');
+      const res = await fileService.saveToDevice(xml, name);
+      if (res.saved) showToast(savedToDeviceMessage(name), 'success');
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -137,7 +137,7 @@
           disabled={busy || reversed.length < 2}
           onclick={reverseAndExport}
         >
-          {#if busy}<Spinner /> Working…{:else}Reverse &amp; export{/if}
+          {#if busy}<Spinner /> Working…{:else}Share{/if}
         </button>
         <button
           data-testid="reverse-save"
@@ -146,7 +146,7 @@
           disabled={busy || reversed.length < 2}
           onclick={saveToDevice}
         >
-          {#if busy}<Spinner /> Working…{:else}Save to device{/if}
+          {#if busy}<Spinner /> Working…{:else}Save{/if}
         </button>
       </div>
     </div>
