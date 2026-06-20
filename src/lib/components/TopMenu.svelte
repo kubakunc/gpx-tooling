@@ -20,7 +20,9 @@
   });
 </script>
 
-<div class="fixed right-4 z-50" style="top:calc(env(safe-area-inset-top) + 14px);">
+<!-- z-index must clear Leaflet (its panes/controls go up to ~1000), otherwise the
+     opened dropdown is painted under the map on tool screens with a map. -->
+<div class="fixed right-4 z-[2000]" style="top:calc(env(safe-area-inset-top) + 14px);">
   <button
     type="button"
     data-testid="nav-toggle"
