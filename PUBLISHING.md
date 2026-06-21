@@ -26,9 +26,14 @@ Plik do wgrania: `android/app/build/outputs/bundle/release/app-release.aab`
 ## ETAP 1 — Utwórz aplikację w Play Console
 
 1. Play Console → **Create app**.
-2. App name: **GPX Editor** · Default language: **English (United States)** ·
+2. App name: **`GPX Editor: Merge, Fix & More`** (to jest tytuł w sklepie, ≤30 zn.,
+   i to ono pozycjonuje) · Default language: **English (United States)** ·
    App or game: **App** · Free or paid: **Free**.
 3. Zaakceptuj deklaracje (Developer Program Policies, US export laws) → **Create app**.
+
+> Dwie różne nazwy (celowo): tytuł w sklepie = `GPX Editor: Merge, Fix & More`,
+> a nazwa pod ikoną na telefonie = `GPX Editor` (krótka, z APK — żeby się nie
+> ucięła). Nic w kodzie nie zmieniasz; długa nazwa wpisywana jest tylko w Console.
 
 ---
 
@@ -69,7 +74,7 @@ Apka przetwarza pliki lokalnie, ALE dwa SDK Google zbierają dane:
 
 Menu: **Grow → Store presence → Main store listing**. Skopiuj z `store-assets/play-listing.md`:
 
-- [ ] **App name:** `GPX Editor`
+- [ ] **App name:** `GPX Editor: Merge, Fix & More` (29 zn. — tytuł w sklepie)
 - [ ] **Short description** (≤80 zn.):
       `Merge, trim, fix & convert GPX, FIT, TCX & KML tracks — 100% offline.`
 - [ ] **Full description:** wklej całość z sekcji „Full description".
@@ -80,8 +85,9 @@ Menu: **Grow → Store presence → Main store listing**. Skopiuj z `store-asset
 - [ ] Kategoria aplikacji: **Maps & Navigation** (Console: Store settings).
 - [ ] Tagi: GPS, Cycling, Running, Hiking, Maps.
 
-> Uwaga ASO: pole **App name** w Console (do 30 zn.) może brzmieć
-> `GPX Editor: Merge, Fix & More` — to ono najmocniej wpływa na pozycjonowanie.
+> Uwaga ASO: pole **App name** w Console (do 30 zn.) to tytuł w sklepie i to ono
+> najmocniej wpływa na pozycjonowanie — wpisz `GPX Editor: Merge, Fix & More`.
+> Nazwa pod ikoną na telefonie zostaje krótka („GPX Editor", z APK).
 
 ---
 
